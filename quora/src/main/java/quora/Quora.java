@@ -1,4 +1,4 @@
-package quora
+package quora;
 
 public class Quora {
 }
