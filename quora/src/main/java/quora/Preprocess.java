@@ -30,6 +30,61 @@ import static water.KaggleUtils.importParseFrame;
 
 public class Preprocess extends MRTask<Preprocess> {
 
+  private static String contractionMap(String s) {
+    if( s.equals("aren't") ) return "are not";
+    if( s.equals("can't") ) return "cannot";
+    if( s.equals("couldn't") ) return "could not";
+    if( s.equals("didn't") ) return "did not";
+    if( s.equals("doesn't") ) return "does not";
+    if( s.equals("don't") ) return "do not";
+    if( s.equals("hadn't") ) return "had not";
+    if( s.equals("hasn't") ) return "has not";
+    if( s.equals("haven't") ) return "have not";
+    if( s.equals("he'd") ) return "he had";
+    if( s.equals("he'll") ) return "he will";
+    if( s.equals("he's") ) return "he is";
+    if( s.equals("I'd") ) return "I had";
+    if( s.equals("I'll") ) return "I will";
+    if( s.equals("I'm") ) return "I am";
+    if( s.equals("I've") ) return "I have";
+    if( s.equals("isn't") ) return "is not";
+    if( s.equals("let's") ) return "let us";
+    if( s.equals("mightn't") ) return "might not";
+    if( s.equals("mustn't") ) return "must not";
+    if( s.equals("shan't") ) return "shall not";
+    if( s.equals("she'd") ) return "she had";
+    if( s.equals("she'll") ) return "she will";
+    if( s.equals("she's") ) return "she is";
+    if( s.equals("shouldn't") ) return "should not";
+    if( s.equals("that's") ) return "that is";
+    if( s.equals("there's") ) return "there is";
+    if( s.equals("they'd") ) return "they had";
+    if( s.equals("they'll") ) return "they will";
+    if( s.equals("they're") ) return "they are";
+    if( s.equals("they've") ) return "they have";
+    if( s.equals("we'd") ) return "we had";
+    if( s.equals("we're") ) return "we are";
+    if( s.equals("we've") ) return "we have";
+    if( s.equals("weren't") ) return "were not";
+    if( s.equals("what'll") ) return "what will";
+    if( s.equals("what're") ) return "what are";
+    if( s.equals("what's") ) return "what is";
+    if( s.equals("what've") ) return "what have";
+    if( s.equals("where's") ) return "where is";
+    if( s.equals("who's") ) return "who had; who would";
+    if( s.equals("who'll") ) return "who will";
+    if( s.equals("who're") ) return "who are";
+    if( s.equals("who's") ) return "who is";
+    if( s.equals("who've") ) return "who have";
+    if( s.equals("won't") ) return "will not";
+    if( s.equals("wouldn't") ) return "would not";
+    if( s.equals("you'd") ) return "you had";
+    if( s.equals("you'll") ) return "you will";
+    if( s.equals("you're") ) return "you are";
+    if( s.equals("you've") ) return "you have";
+    return s;
+  }
+
   private static final int NDIST_METRICS=11;
   private static final int ID=0;
   private final int Q1;
@@ -45,7 +100,7 @@ public class Preprocess extends MRTask<Preprocess> {
   static final String[] NAMES = new String[]{
     "id",  // the row id
     // some basic feature computations on the raw sentences
-    "common_words","fuzzy_matched","common_caps","q1_chars","q1_fuzzy_chars","q2_chars","q2_fuzzy_chars","abs_chars","abs_fuzzy_chars","q1_punc_count","q2_punc_count","q1_caps","q2_caps","abs_caps",
+    "q1_words", "q2_words", "abs_words","common_words","fuzzy_matched","common_caps","q1_chars","q1_fuzzy_chars","q2_chars","q2_fuzzy_chars","abs_chars","abs_fuzzy_chars","q1_punc_count","q2_punc_count","q1_caps","q2_caps","abs_caps",
     // some metrics between the simplified sentences
     "cosine","dameru","jaccard","jwink","leven","lcsub","ngram","leven_norm","optim_align","qgram","sdice",
     // metrics on the POS tags
@@ -65,7 +120,6 @@ public class Preprocess extends MRTask<Preprocess> {
       return names;
     }
   }
-
 
   Preprocess(boolean test) {
     _test=test;
@@ -88,14 +142,14 @@ public class Preprocess extends MRTask<Preprocess> {
     System.out.println("POS tagger loaded");
     _lex =new GlobalLexica(d.createElement("mocked"));
     // load lexica
-    _lex.setAmbiguityClasses(getLex("edu/emory/mathcs/nlp/lexica/en-ambiguity-classes-simplified-lowercase.xz", Field.word_form_simplified_lowercase));
-    System.out.println("Ambiguity classes loaded");
-    _lex.setWordClusters(getLex("edu/emory/mathcs/nlp/lexica/en-brown-clusters-simplified-lowercase.xz", Field.word_form_simplified_lowercase));
-    System.out.println("Word clusters loaded");
+//    _lex.setAmbiguityClasses(getLex("edu/emory/mathcs/nlp/lexica/en-ambiguity-classes-simplified-lowercase.xz", Field.word_form_simplified_lowercase));
+//    System.out.println("Ambiguity classes loaded");
+//    _lex.setWordClusters(getLex("edu/emory/mathcs/nlp/lexica/en-brown-clusters-simplified-lowercase.xz", Field.word_form_simplified_lowercase));
+//    System.out.println("Word clusters loaded");
     _lex.setWordEmbeddings(getLex("edu/emory/mathcs/nlp/lexica/en-word-embeddings-undigitalized.xz", Field.word_form_undigitalized));
     System.out.println("Word embeddings loaded");
-    _lex.setNamedEntityGazetteers(getLex("edu/emory/mathcs/nlp/lexica/en-named-entity-gazetteers-simplified-lowercase.xz", Field.word_form_simplified));
-    System.out.println("named entity gazetteers loaded");
+//    _lex.setNamedEntityGazetteers(getLex("edu/emory/mathcs/nlp/lexica/en-named-entity-gazetteers-simplified-lowercase.xz", Field.word_form_simplified));
+//    System.out.println("named entity gazetteers loaded");
     _lex.setStopWords(getLex("edu/emory/mathcs/nlp/lexica/en-stop-words-simplified-lowercase.xz", Field.word_form_simplified_lowercase));
     System.out.println("stop words loaded");
 
@@ -114,6 +168,10 @@ public class Preprocess extends MRTask<Preprocess> {
     _simMetrics[10]= new SorensenDice();
 
     System.out.println("Distance metrics initialized");
+
+
+//    Word2Vec w2v = WordVectorSerializer.readWord2VecModel("");
+
   }
 
 
@@ -147,13 +205,26 @@ public class Preprocess extends MRTask<Preprocess> {
       String sf1=null;
       String sf2=null;
       try {
+        int ncs_idx=0;
         int id = (int) cs[ID].at8(r);
-        ncs[0].addNum(id);
+        ncs[ncs_idx++].addNum(id);
 
         q1 = cs[Q1].isNA(r)?"":cs[Q1].atStr(bstr, r).toString();
         q2 = cs[Q2].isNA(r)?"":cs[Q2].atStr(bstr, r).toString();
+        // drop question marks
+        q1 = q1.replace("\\?","");
+        q2 = q2.replace("\\?","");
         w1 = q1.split(" ");
         w2 = q2.split(" ");
+
+        // undo contractions
+        for(int i=0;i<w1.length;++i) w1[i] = contractionMap(w1[i]);
+        for(int i=0;i<w2.length;++i) w2[i] = contractionMap(w2[i]);
+
+        q1 = join(w1);
+        q2 = join(w2);
+        q1 = q1.replaceAll("\\p{P}", "");
+        q2 = q2.replaceAll("\\p{P}", "");
 
         List<Token> t1 = _tok.tokenize(q1);
         List<Token> t2 = _tok.tokenize(q2);
@@ -165,11 +236,13 @@ public class Preprocess extends MRTask<Preprocess> {
         _lex.process(nodes2);
         _pos.process(nodes2);
 
-        f1 = fuzzy(toStringA(nodes1));
-        f2 = fuzzy(toStringA(nodes2));
+        f1 = toStringA(nodes1);
+        f2 = toStringA(nodes2);
         sf1 = join(f1);
         sf2 = join(f2);
 
+        int q1_words = w1.length;
+        int q2_words = w2.length;
         int common_words = countCommon(w1, w2);
         int fuzzy_matched = countCommon(f1, f2);
         int common_caps = countCapsCommon(w1, w2);
@@ -184,26 +257,29 @@ public class Preprocess extends MRTask<Preprocess> {
         int q1_caps = countCaps(q1);
         int q2_caps = countCaps(q2);
         int abs_caps = Math.abs(q1_caps - q2_caps);
-        ncs[1].addNum(common_words);
-        ncs[2].addNum(fuzzy_matched);
-        ncs[3].addNum(common_caps);
-        ncs[4].addNum(q1_chars);
-        ncs[5].addNum(q1_fuzzy_chars);
-        ncs[6].addNum(q2_chars);
-        ncs[7].addNum(q2_fuzzy_chars);
-        ncs[8].addNum(abs_chars);
-        ncs[9].addNum(abs_fuzzy_chars);
-        ncs[10].addNum(q1_punc_count);
-        ncs[11].addNum(q2_punc_count);
-        ncs[12].addNum(q1_caps);
-        ncs[13].addNum(q2_caps);
-        ncs[14].addNum(abs_caps);
+        ncs[ncs_idx++].addNum(q1_words);
+        ncs[ncs_idx++].addNum(q2_words);
+        ncs[ncs_idx++].addNum(Math.abs(q1_words - q2_words));
+        ncs[ncs_idx++].addNum(common_words);
+        ncs[ncs_idx++].addNum(fuzzy_matched);
+        ncs[ncs_idx++].addNum(common_caps);
+        ncs[ncs_idx++].addNum(q1_chars);
+        ncs[ncs_idx++].addNum(q1_fuzzy_chars);
+        ncs[ncs_idx++].addNum(q2_chars);
+        ncs[ncs_idx++].addNum(q2_fuzzy_chars);
+        ncs[ncs_idx++].addNum(abs_chars);
+        ncs[ncs_idx++].addNum(abs_fuzzy_chars);
+        ncs[ncs_idx++].addNum(q1_punc_count);
+        ncs[ncs_idx++].addNum(q2_punc_count);
+        ncs[ncs_idx++].addNum(q1_caps);
+        ncs[ncs_idx++].addNum(q2_caps);
+        ncs[ncs_idx++].addNum(abs_caps);
 
         // similarity features on fuzzed words
         getDistances(q1, q2, dists);
-        int ncs_idx = 15;
+//        ncs_idx = 15;
         for (double dist : dists) ncs[ncs_idx++].addNum(dist);
-        assert ncs_idx == 26;
+//        assert ncs_idx == 26;
 
         // string similarity on POS tags
         // only get pos tags for non-stop words
@@ -211,7 +287,7 @@ public class Preprocess extends MRTask<Preprocess> {
         String pos2 = posTags(nodes2);
         getDistances(pos1, pos2, dists2);
         for (double dist : dists2) ncs[ncs_idx++].addNum(dist);
-        assert ncs_idx == 37;
+//        assert ncs_idx == 37;
 
         // word-embeddings features
         wordEmVecs(nodes1, we_s1, we_ss1);
@@ -266,7 +342,7 @@ public class Preprocess extends MRTask<Preprocess> {
 
     int cnt=0;
     for (NLPNode n1 : nodes) {
-//      if( n1.isStopWord() ) continue;
+      if( n1.isStopWord() ) continue;
       cnt++;
       float[] f = n1.getWordEmbedding();
       add(ws, f);
@@ -310,7 +386,7 @@ public class Preprocess extends MRTask<Preprocess> {
   static String posTags(NLPNode[] nodes) {
     StringBuilder sb = new StringBuilder();
     for(NLPNode n: nodes) {
-//      if( n.isStopWord() ) continue;
+      if( n.isStopWord() ) continue;
       sb.append(n.getPartOfSpeechTag());
     }
     return sb.toString();
@@ -339,10 +415,10 @@ public class Preprocess extends MRTask<Preprocess> {
   }
 
   // filter out stop words
-  String[] toStringA(NLPNode[] nodes) {
+  static String[] toStringA(NLPNode[] nodes) {
     ArrayList<String> words = new ArrayList<>();
     for(int i=1;i<nodes.length-1;++i) {
-//      if( nodes[i].isStopWord() ) continue;
+      if( nodes[i].isStopWord() ) continue;
       words.add(nodes[i].getWordFormSimplifiedLowercase());
     }
     return words.toArray(new String[words.size()]);
@@ -401,17 +477,10 @@ public class Preprocess extends MRTask<Preprocess> {
     return cnt;
   }
 
-  static String[] fuzzy(String[] words) {
-    String[] fuzzed = words.clone();
-    for(int i=0;i<fuzzed.length;++i)
-      fuzzed[i] = fuzzed[i].replaceAll("\\p{P}", "");
-    return fuzzed;
-  }
-
   public static void main(String[] args) {
     H2OApp.main(args);
-    boolean train=false;
-    int id=2;
+    boolean train=true;
+    int id=3;
     String outpath= train?"./data/train_feats"+id+".csv":"./data/test_feats"+id+".csv";
     String path = train?"./data/train_clean.csv":"./data/test_clean.csv";
     String name = train?"train":"test";

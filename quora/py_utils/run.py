@@ -1,3 +1,3 @@
 import xgb_train
 
-import xgb_test
+import xgb_predict

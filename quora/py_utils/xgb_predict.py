@@ -21,9 +21,9 @@ print "probability predictions made"
 
 print "writing to disk..."
 with open("../submissions/{}.csv".format(next_sub), "w") as f:
-  f.write("{},{}\n".format("test_id","is_duplicate")
-  for idx,i in enumerate(testing.id):
-    f.write("{},{}\n".format(i, preds[i][1]))
+  f.write("{},{}\n".format("test_id","is_duplicate"))
+  for i in xrange(len(testing.id)):
+    f.write("{},{}\n".format(testing.id[i], preds[i][1]))
     
 with open("../submissions/next", "w") as f:
   f.write("{}".format(next_sub))
