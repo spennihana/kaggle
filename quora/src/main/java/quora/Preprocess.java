@@ -479,6 +479,14 @@ public class Preprocess extends MRTask<Preprocess> {
 
   public static void main(String[] args) {
     H2OApp.main(args);
+
+    WordEmbeddingsReader em = new WordEmbeddingsReader();
+    em.read("./lib/w2vec_models/gw2vec",300);
+    long start = System.currentTimeMillis();
+    double[] w = em.find("hello");
+    System.out.println("word found in: " + (System.currentTimeMillis()-start)/1000. + " seconds");
+    H2O.shutdown(0);
+
     boolean train=true;
     int id=3;
     String outpath= train?"./data/train_feats"+id+".csv":"./data/test_feats"+id+".csv";
