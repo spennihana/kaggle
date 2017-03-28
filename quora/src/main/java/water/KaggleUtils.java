@@ -17,4 +17,13 @@ public class KaggleUtils {
     ps.setColumnTypes(types);
     return ParseDataset.parse(Key.make(datasetName), new Key[]{Key.make(keys.get(0))}, true, ps);
   }
+
+  public static Frame importParseFrame(String datasetPath, String name) {
+    ArrayList<String> files = new ArrayList<>(); ArrayList<String> keys = new ArrayList<>();
+    ArrayList<String> fails = new ArrayList<>(); ArrayList<String> dels = new ArrayList<>();
+    H2O.getPM().importFiles(datasetPath,null,files,keys,fails,dels);
+    String datasetName = name==null?datasetPath.split("\\.(?=[^\\.]+$)")[0]:name;
+    ParseSetup ps = ParseSetup.guessSetup(new Key[]{Key.make(keys.get(0))}, false, 0);
+    return ParseDataset.parse(Key.make(datasetName), new Key[]{Key.make(keys.get(0))}, true, ps);
+  }
 }

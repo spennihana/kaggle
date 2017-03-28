@@ -13,10 +13,7 @@ import edu.emory.mathcs.nlp.component.tokenizer.token.Token;
 import edu.emory.mathcs.nlp.decode.NLPDecoder;
 import info.debatty.java.stringsimilarity.*;
 import info.debatty.java.stringsimilarity.interfaces.StringDistance;
-import water.H2OApp;
-import water.Job;
-import water.Key;
-import water.MRTask;
+import water.*;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.NewChunk;
@@ -203,7 +200,7 @@ public class Preprocess extends MRTask<Preprocess> {
         ncs[14].addNum(abs_caps);
 
         // similarity features on fuzzed words
-        getDistances(sf1, sf2, dists);
+        getDistances(q1, q2, dists);
         int ncs_idx = 15;
         for (double dist : dists) ncs[ncs_idx++].addNum(dist);
         assert ncs_idx == 26;
@@ -269,7 +266,7 @@ public class Preprocess extends MRTask<Preprocess> {
 
     int cnt=0;
     for (NLPNode n1 : nodes) {
-      if( n1.isStopWord() ) continue;
+//      if( n1.isStopWord() ) continue;
       cnt++;
       float[] f = n1.getWordEmbedding();
       add(ws, f);
@@ -313,7 +310,7 @@ public class Preprocess extends MRTask<Preprocess> {
   static String posTags(NLPNode[] nodes) {
     StringBuilder sb = new StringBuilder();
     for(NLPNode n: nodes) {
-      if( n.isStopWord() ) continue;
+//      if( n.isStopWord() ) continue;
       sb.append(n.getPartOfSpeechTag());
     }
     return sb.toString();
@@ -345,7 +342,7 @@ public class Preprocess extends MRTask<Preprocess> {
   String[] toStringA(NLPNode[] nodes) {
     ArrayList<String> words = new ArrayList<>();
     for(int i=1;i<nodes.length-1;++i) {
-      if( nodes[i].isStopWord() ) continue;
+//      if( nodes[i].isStopWord() ) continue;
       words.add(nodes[i].getWordFormSimplifiedLowercase());
     }
     return words.toArray(new String[words.size()]);
@@ -414,7 +411,8 @@ public class Preprocess extends MRTask<Preprocess> {
   public static void main(String[] args) {
     H2OApp.main(args);
     boolean train=false;
-    String outpath= train?"./data/train_feats.csv":"./data/test_feats.csv";
+    int id=2;
+    String outpath= train?"./data/train_feats"+id+".csv":"./data/test_feats"+id+".csv";
     String path = train?"./data/train_clean.csv":"./data/test_clean.csv";
     String name = train?"train":"test";
     String key= train?"train_feats":"test_feats";
@@ -430,5 +428,7 @@ public class Preprocess extends MRTask<Preprocess> {
     System.out.println("Writing frame ");
     Job job = Frame.export(out, outpath, out._key.toString(), false, 1);
     job.get();
+
+    H2O.shutdown(0);
   }
 }
