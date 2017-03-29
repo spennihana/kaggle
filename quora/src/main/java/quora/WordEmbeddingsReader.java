@@ -7,7 +7,9 @@ import water.MRTask;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
+import water.nbhm.NonBlockingHashMap;
 import water.parser.BufferedString;
+import water.util.IcedDouble;
 import water.util.IcedHashMap;
 
 import java.io.*;
@@ -19,7 +21,8 @@ import java.util.Arrays;
 public class WordEmbeddingsReader extends Iced {
   Frame _embeddings;
   int _len;
-  transient IcedHashMap<String, double[]> _cache;  // node local cache
+  IcedHashMap<String, IcedDouble[]> _wordvecs;  // node local cache
+  transient NonBlockingHashMap<String, double[]> _cache; // cached vecs
   // path to embeddings file
   // length of embedding vector (not including word...)
   void read(String path, int len) {
@@ -28,12 +31,12 @@ public class WordEmbeddingsReader extends Iced {
     Arrays.fill(types, Vec.T_NUM);
     types[0]=Vec.T_STR;
     _embeddings = KaggleUtils.importParseFrame(path, "embeddings", types);
-    _cache = new Reduce().doAll(_embeddings).r;
-//    _embeddings.delete();
+    _wordvecs = new Reduce().doAll(_embeddings).r;
+    _embeddings.delete();
   }
 
   void read2(String path, int len) {
-    _cache = new IcedHashMap<>();
+    _cache = new NonBlockingHashMap<>();
     _len=len;
     int print=20000;
     try(BufferedReader in = new BufferedReader(new FileReader(new File(path)))) {
@@ -62,22 +65,27 @@ public class WordEmbeddingsReader extends Iced {
   }
 
   void setupLocal() {
-    if( _cache!=null ) {
-      _cache = new Reduce().doAll(_embeddings).r;
+    if( _cache==null ) {
+      for( String s: _wordvecs.keySet()) {
+        IcedDouble[] id = _wordvecs.get(s);
+        double[] d = new double[id.length];
+        for(int i=0;i<id.length;++i) d[i]=id[i]._val;
+        _cache.put(s,d);
+      }
     }
-//    _embeddings.delete();
+    _wordvecs=null;
   }
 
   static class Reduce extends MRTask<Reduce> {
-    IcedHashMap<String, double[]> r;
+    IcedHashMap<String, IcedDouble[]> r;
     @Override public void setupLocal() { r=new IcedHashMap<>(); }
     @Override public void map(Chunk[] cs) {
       BufferedString bstr = new BufferedString();
-      double[] v = new double[300];
+      IcedDouble[] v = new IcedDouble[300];
       for(int i=0;i<cs[0]._len;++i) {
         if( cs[0].isNA(i) ) continue;
         String s = cs[0].atStr(bstr,i).toString();
-        for(int c=1;c<cs.length;++c) v[c-1] = cs[c].atd(i);
+        for(int c=1;c<cs.length;++c) v[c-1] = new IcedDouble(cs[c].atd(i));
         r.put(s,v);
       }
     }
