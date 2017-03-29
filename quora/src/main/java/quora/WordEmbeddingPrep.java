@@ -12,9 +12,7 @@ import water.nbhm.NonBlockingHashMap;
 import water.parser.BufferedString;
 
 import java.io.IOException;
-import java.util.Arrays;
 
-import static quora.Utils.*;
 import static water.KaggleUtils.importParseFrame;
 
 
@@ -39,12 +37,7 @@ public class WordEmbeddingPrep extends MRTask<WordEmbeddingPrep> {
   }
   @Override public void map(Chunk[] cs, NewChunk[] ncs) {
     BufferedString bstr = new BufferedString();
-    double[][] min_we = new double[2][300];
-    Arrays.fill(min_we[0], Double.MAX_VALUE);
-    Arrays.fill(min_we[1], Double.MAX_VALUE);
-    double[][] max_we = new double[2][300];
-    Arrays.fill(max_we[0], -Double.MAX_VALUE);
-    Arrays.fill(max_we[1], -Double.MAX_VALUE);
+
     for (int r = 0; r < cs[0]._len; ++r) {
       int ncs_idx = 0;
       int id = (int) cs[ID].at8(r);
@@ -52,40 +45,12 @@ public class WordEmbeddingPrep extends MRTask<WordEmbeddingPrep> {
 
       String q1 = cs[Q1].isNA(r) ? "" : cs[Q1].atStr(bstr, r).toString();
       String q2 = cs[Q2].isNA(r) ? "" : cs[Q2].atStr(bstr, r).toString();
-      // drop question marks
-      q1 = q1.replace("\\?", "");
-      q2 = q2.replace("\\?", "");
-      String[] w1 = q1.split(" ");
-      String[] w2 = q2.split(" ");
 
-      // undo contractions, remove punctuation, lower
-      for (int i = 0; i < w1.length; ++i) w1[i] = contractionMap(w1[i]).replaceAll("\\p{P}", "").toLowerCase();
-      for (int i = 0; i < w2.length; ++i) w2[i] = contractionMap(w2[i]).replaceAll("\\p{P}", "").toLowerCase();
-
-      for(String w: w1) {
-        double[] c = _cache.get(w);
-        if( c==null ) {
-          _cache.put(w, c = WordEmbeddingsReader.get2(w));
-        }
-        min_we[0] = reduceMin(min_we[0], c);
-        max_we[0] = reduceMax(max_we[0], c);
-      }
-
-      for(String w: w2) {
-        double[] c = _cache.get(w);
-        if( c==null ) {
-          _cache.put(w, c = WordEmbeddingsReader.get2(w));
-        }
-        min_we[1] = reduceMin(min_we[1], c);
-        max_we[1] = reduceMax(max_we[1], c);
-      }
+      double[][] mm = WordEmbeddingsReader.get3(q1,q2);
 
       // write out the abs diff in the min/max vecs
-      for(int i=0;i<min_we[0].length;i++)
-        ncs[ncs_idx++].addNum(Math.abs(min_we[0][i]-min_we[1][i]));
-      for(int i=0;i<max_we[0].length;i++)
-        ncs[ncs_idx++].addNum(Math.abs(max_we[0][i]-max_we[1][i]));
-
+      for(int i=0;i<mm[0].length;i++) ncs[ncs_idx++].addNum(mm[0][i]);
+      for(int i=0;i<mm[1].length;i++) ncs[ncs_idx++].addNum(mm[1][i]);
       if (!_test) ncs[ncs_idx].addNum(cs[cs.length - 1].at8(r));
     }
   }
@@ -104,6 +69,8 @@ public class WordEmbeddingPrep extends MRTask<WordEmbeddingPrep> {
 
     byte[] types= train?new byte[]{Vec.T_NUM,Vec.T_NUM,Vec.T_NUM, Vec.T_STR, Vec.T_STR, Vec.T_NUM}:new byte[]{Vec.T_NUM,Vec.T_STR,Vec.T_STR};
     Frame fr = importParseFrame(path,name, types);
+
+    WordEmbeddingsReader.get2("hello");
 
     long s = System.currentTimeMillis();
     WordEmbeddingPrep wep = new WordEmbeddingPrep(!train);

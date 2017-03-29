@@ -14,7 +14,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -64,10 +63,10 @@ public class WordEmbeddingsReader extends Iced {
 
   static double[] get2(String word) {
     try {
-      URL md = openURLConnection(word);
+      URL md = openURLConnection("http://192.168.1.145:54321/3/WordEm?word="+ URLEncoder.encode(word, "UTF-8"));
       try (BufferedReader in = new BufferedReader(new InputStreamReader(md.openStream()))) {
         String foo = in.readLine();
-        return null;
+        return parseDoubles(foo.substring(foo.indexOf("[")+1, foo.indexOf("]")));
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
@@ -76,23 +75,42 @@ public class WordEmbeddingsReader extends Iced {
     }
   }
 
-  static URL openURLConnection(String word) throws MalformedURLException, UnsupportedEncodingException {
-    URL md = new URL("192.168.1.145:54321/3/WordEm?word="+ URLEncoder.encode(word, "UTF-8"));
-    HttpURLConnection.setFollowRedirects(false);
-    HttpURLConnection connection = null;
+  static double[][] get3(String s1, String s2) {
     try {
-      connection = (HttpURLConnection) md.openConnection();
-    } catch (IOException e) {
-      e.printStackTrace();
+      String url = "http://192.168.1.145:54321/3/WordEm?q1="+ URLEncoder.encode(s1, "UTF-8")+"&q2="+URLEncoder.encode(s2, "UTF-8");
+      URL md = openURLConnection(url);
+      try (BufferedReader in = new BufferedReader(new InputStreamReader(md.openStream()))) {
+        String res = in.readLine();
+        double[][] mm = new double[2][];
+        mm[0] = parseDoublesHelper(res.substring(res.indexOf("max"), res.indexOf("]")+1));
+        mm[1] = parseDoublesHelper(res.substring(res.indexOf("min"), res.indexOf("]")+1));
+        return mm;
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    } catch(MalformedURLException | UnsupportedEncodingException e) {
+      throw new RuntimeException(e);
     }
-    try {
-      System.out.println("Response code = " + connection.getResponseCode());
-    } catch (IOException e) {
-      e.printStackTrace();
+  }
+
+  static double[] parseDoublesHelper(String s) {
+    return parseDoubles(s.substring(s.indexOf("[")+1, s.indexOf("]")));
+  }
+
+  static double[] parseDoubles(String da) {
+    double[] res = new double[300];
+    int x=0;
+    int c=0;
+    for(int i=0;i<da.length();++i) {
+      if(da.charAt(i)==',') {
+        res[c++] = (double)Float.valueOf(da.substring(x,i));
+        x=i+1;
+      }
     }
-    String header = connection.getHeaderField("location");
-    if (header != null)
-      System.out.println("Redirected to " + header);
-    return md;
+    return res;
+  }
+
+  static URL openURLConnection(String url) throws MalformedURLException, UnsupportedEncodingException {
+    return new URL(url);
   }
 }

@@ -81,7 +81,7 @@ public class Utils {
     return s;
   }
 
-  static String join(String[] words) {
+  public static String join(String[] words) {
     boolean first=true;
     StringBuilder sb= new StringBuilder();
     for (String word : words) {
