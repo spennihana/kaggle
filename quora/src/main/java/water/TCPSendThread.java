@@ -23,7 +23,7 @@ public class TCPSendThread extends Thread {
   static { _scf= H2O.SELF.getSocketFactory(); }
 
   private TCPSendThread() {
-    this(new AutoBuffer.BBPool(100<<20).make()); // 100MB cap on one big chunk of market data...
+    this(new AutoBuffer.BBPool(100<<20).make());
     _server=true;
   }
 
@@ -33,16 +33,7 @@ public class TCPSendThread extends Thread {
     _server=false;
   }
 
-  /**
-   * has 100MB bytebuffer
-   * for handling potentially large volume of market data.
-   */
   public static TCPSendThread server() { return new TCPSendThread(); }
-
-  /**
-   * Created by the client for performing simple TCP requests
-   * of market data.
-   */
   public static TCPSendThread client(InetAddress serverIP, int serverPort) {
     TCPSendThread t = new TCPSendThread(AutoBuffer.BBP_BIG.make());
     assert !t._server;

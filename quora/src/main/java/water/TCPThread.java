@@ -24,17 +24,13 @@ public class TCPThread extends Thread {
   private ByteBuffer _bb;
   public TCPThread() { _bb = ByteBuffer.allocate(INIT_BUF).order(ByteOrder.nativeOrder()); }
 
-  /**
-   * This is the receiving thread. All incoming requests for
-   * connections and market data come thru here.
-   */
   @SuppressWarnings("resource")
   public void run() {
     Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
     ServerSocketChannel errsock = null;
     boolean saw_error = false;
     ExecutorService es = Executors.newSingleThreadExecutor();
-    Log.info("Started Market Data Receiver Thread");
+    Log.info("Started receiver thread.");
     while( true ) {
       SocketChannel socketChannel=null;
       try {
