@@ -12,12 +12,14 @@ import water.nbhm.NonBlockingHashMap;
 import water.parser.BufferedString;
 
 import java.io.IOException;
+import java.net.URLEncoder;
 
 import static water.KaggleUtils.importParseFrame;
 
 
 public class WordEmbeddingPrep extends MRTask<WordEmbeddingPrep> {
 
+  private static final int[] PORTS=new int[]{54321, 65434};
   private static final int ID=0;
   private final int Q1;
   private final int Q2;
@@ -37,6 +39,7 @@ public class WordEmbeddingPrep extends MRTask<WordEmbeddingPrep> {
   }
   @Override public void map(Chunk[] cs, NewChunk[] ncs) {
     BufferedString bstr = new BufferedString();
+    int pidx = cs[0].cidx()%2;
 
     for (int r = 0; r < cs[0]._len; ++r) {
       int ncs_idx = 0;
@@ -46,7 +49,13 @@ public class WordEmbeddingPrep extends MRTask<WordEmbeddingPrep> {
       String q1 = cs[Q1].isNA(r) ? "" : cs[Q1].atStr(bstr, r).toString();
       String q2 = cs[Q2].isNA(r) ? "" : cs[Q2].atStr(bstr, r).toString();
 
-      double[][] mm = WordEmbeddingsReader.get3(q1,q2);
+      String url;
+      try {
+        url = "http://192.168.1.145:"+54321+"/3/WordEm?q1=" + URLEncoder.encode(q1, "UTF-8") + "&q2=" + URLEncoder.encode(q2, "UTF-8");
+      } catch(Exception e){
+        throw new RuntimeException(e);
+      }
+      double[][] mm = WordEmbeddingsReader.get3(url);
 
       // write out the abs diff in the min/max vecs
       for(int i=0;i<mm[0].length;i++) ncs[ncs_idx++].addNum(mm[0][i]);
@@ -59,10 +68,10 @@ public class WordEmbeddingPrep extends MRTask<WordEmbeddingPrep> {
     H2O.main(args);
 
     boolean train=true;
-    int id=9999;
-    String outpath= train?"./data/train_feats"+id+".csv":"./data/test_feats"+id+".csv";
-//    String path = train?"./data/train_clean.csv":"./data/test_clean.csv";
-    String path = train?"./data/train_sample.csv":"";
+    int id=1;
+    String outpath= train?"./data/train_embed"+id+".csv":"./data/test_embed"+id+".csv";
+    String path = train?"./data/train_clean.csv":"./data/test_clean.csv";
+//    String path = train?"./data/train_sample.csv":"";
     String name = train?"train":"test";
     String key= train?"train_feats":"test_feats";
     int nouts = 1+600+(train?1:0);
@@ -70,7 +79,7 @@ public class WordEmbeddingPrep extends MRTask<WordEmbeddingPrep> {
     byte[] types= train?new byte[]{Vec.T_NUM,Vec.T_NUM,Vec.T_NUM, Vec.T_STR, Vec.T_STR, Vec.T_NUM}:new byte[]{Vec.T_NUM,Vec.T_STR,Vec.T_STR};
     Frame fr = importParseFrame(path,name, types);
 
-    WordEmbeddingsReader.get2("hello");
+//    WordEmbeddingsReader.get2("hello");
 
     long s = System.currentTimeMillis();
     WordEmbeddingPrep wep = new WordEmbeddingPrep(!train);

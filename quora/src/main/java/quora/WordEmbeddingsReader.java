@@ -75,15 +75,14 @@ public class WordEmbeddingsReader extends Iced {
     }
   }
 
-  static double[][] get3(String s1, String s2) {
+  static double[][] get3(String url) {
     try {
-      String url = "http://192.168.1.145:54321/3/WordEm?q1="+ URLEncoder.encode(s1, "UTF-8")+"&q2="+URLEncoder.encode(s2, "UTF-8");
       URL md = openURLConnection(url);
       try (BufferedReader in = new BufferedReader(new InputStreamReader(md.openStream()))) {
         String res = in.readLine();
         double[][] mm = new double[2][];
-        mm[0] = parseDoublesHelper(res.substring(res.indexOf("max"), res.indexOf("]")+1));
-        mm[1] = parseDoublesHelper(res.substring(res.indexOf("min"), res.indexOf("]")+1));
+        mm[0] = parseDoublesHelper(res.substring(res.indexOf("max")));
+        mm[1] = parseDoublesHelper(res.substring(res.indexOf("min")));
         return mm;
       } catch (IOException e) {
         throw new RuntimeException(e);

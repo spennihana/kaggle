@@ -2,7 +2,7 @@ import pickle
 import xgboost as xgb
 import pandas as pd
 
-testing = pd.read_csv("../data/test_feats3.csv")
+testing = pd.read_csv("../data/test_embed2.csv")
 print "testing data read in"
 
 next_sub = 0
@@ -16,7 +16,7 @@ clf = loaded_model = pickle.load(open("../models/xgb_{}.model".format(next_sub),
 print "loaded pickled model"
 
 print "making predictions..."
-preds = clf.predict_proba(testing[xlab])
+preds = clf.predict_proba(testing[xlab].as_matrix())
 print "probability predictions made"
 
 print "writing to disk..."

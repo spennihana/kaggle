@@ -255,6 +255,8 @@ public class Preprocess extends MRTask<Preprocess> {
         ncs[ncs_idx++].addNum(abs_wess_sum);
         ncs[ncs_idx++].addNum(wes_cosine);
         ncs[ncs_idx++].addNum(wess_cosine);
+        for(int i=0;i<we_s1.length;++i)
+          ncs[ncs_idx++].addNum(Math.abs(we_s1[i] - we_s2[i]));
         if (!_test) ncs[ncs_idx].addNum(cs[cs.length - 1].at8(r));
       } catch (Exception e) {
         System.out.println("q1= " + q1);
@@ -415,26 +417,27 @@ public class Preprocess extends MRTask<Preprocess> {
   public static void main(String[] args) {
     H2OApp.main(args);
 
-    WordEmbeddingsReader em = new WordEmbeddingsReader();
-    em.read("./lib/w2vec_models/gw2vec",300);
-    long start = System.currentTimeMillis();
-    double[] w = em.find("hello");
-    System.out.println("word found in: " + (System.currentTimeMillis()-start)/1000. + " seconds");
-    H2O.shutdown(0);
-
-    boolean train=true;
-    int id=3;
-    String outpath= train?"./data/train_feats"+id+".csv":"./data/test_feats"+id+".csv";
+    boolean train=false;
+    int id=2;
+    String outpath= train?"./data/train_embed"+id+".csv":"./data/test_embed"+id+".csv";
     String path = train?"./data/train_clean.csv":"./data/test_clean.csv";
     String name = train?"train":"test";
     String key= train?"train_feats":"test_feats";
-    int nouts = Preprocess.NAMES.length+(train?1:0);
+
+    int nembeddings=50;
+
+    String[] names = Arrays.copyOf(Preprocess.NAMES, Preprocess.NAMES.length+50 + ((train?1:0)));
+    int n=Preprocess.NAMES.length;
+    for(int i=1;i<=nembeddings;++i) names[n++] = "em_"+i;
+    if(train) names[names.length-1] = "is_duplicate";
+
+    int nouts = names.length;
     byte[] types= train?new byte[]{Vec.T_NUM,Vec.T_NUM,Vec.T_NUM, Vec.T_STR, Vec.T_STR, Vec.T_NUM}:new byte[]{Vec.T_NUM,Vec.T_STR,Vec.T_STR};
 
     Frame fr = importParseFrame(path,name, types);
     long s = System.currentTimeMillis();
     Preprocess p = new Preprocess(!train);
-    Frame out = p.doAll(nouts, Vec.T_NUM, fr).outputFrame(Key.make(key),p.getNames(),null);
+    Frame out = p.doAll(nouts, Vec.T_NUM, fr).outputFrame(Key.make(key),names,null);
     System.out.println("all done: " + (System.currentTimeMillis()-s)/1000. + " seconds");
 
     System.out.println("Writing frame ");
