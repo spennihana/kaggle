@@ -4,7 +4,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import StratifiedShuffleSplit
 
-training = pd.read_csv("../data/train_embed2.csv")
+training = pd.read_csv("../data/train_feats5.csv")
 print "loaded training frame"
 
 next_sub = 0
@@ -19,25 +19,25 @@ X = training[xlab]
 y = training[ylab]
 
 print "creating test/train split"
-sss = StratifiedShuffleSplit(n_splits=1, test_size=0.2)
+sss = StratifiedShuffleSplit(n_splits=1, test_size=0.1)
 splits = list(sss.split(X,y))
 xtrain, xtest = X.loc[splits[0][0]], X.loc[splits[0][1]]
 ytrain, ytest = y.loc[splits[0][0]], y.loc[splits[0][1]]
 
 clf = xgb.XGBClassifier(
-learning_rate =0.25,
-n_estimators=200,
-max_depth=9,
+learning_rate =0.02,
+n_estimators=500,
+max_depth=5,
 min_child_weight=1,
 gamma=0.1,
-subsample=0.85,
-colsample_bytree=0.75,
+subsample=0.8,
+colsample_bytree=0.85,
 objective= "binary:logistic",
 scale_pos_weight=1,
 reg_alpha=0.01
 )
 
-evalset = [(xtest.as_matrix(),ytest.as_matrix())]
+evalset = [(xtrain.as_matrix(), ytrain.as_matrix()),(xtest.as_matrix(),ytest.as_matrix())]
 
 print "set up xgb: "
 print clf

@@ -1,7 +1,11 @@
 package quora;
 
+import org.apache.commons.math3.util.FastMath;
 import water.MRTask;
 import water.fvec.Chunk;
+import water.util.IcedInt;
+
+import java.util.HashMap;
 
 public class Utils {
 
@@ -101,5 +105,83 @@ public class Utils {
     for (int i=0; i<a.length; ++i)
       a[i] = Math.max(a[i], b[i]);
     return a;
+  }
+
+  // http://www.catalysoft.com/articles/StrikeAMatch.html
+  public static class StrikeAMatch {
+    private static HashMap<String, IcedInt> wordLetterPairs(String[] words) {
+      HashMap<String, IcedInt> allPairs = new HashMap<>();
+      for (String word : words) {
+        for(int i=0;i<word.length()-1;i++) {
+          String pair = word.substring(i,i+2);
+          IcedInt v = allPairs.get(pair);
+          if( v==null ) allPairs.put(pair, v=new IcedInt(0));
+          v._val++;
+        }
+      }
+      return allPairs;
+    }
+
+    public static double compareStrings(String[] w1, String[] w2) {
+      HashMap<String,IcedInt> pairs1 = wordLetterPairs(w1);
+      HashMap<String,IcedInt> pairs2 = wordLetterPairs(w2);
+      int union = pairs1.size() + pairs2.size();
+
+      int intersection = 0;
+      for(String p1: pairs1.keySet()) {
+        if( pairs2.containsKey(p1) ) {
+          intersection++;
+          IcedInt v = pairs2.get(p1);
+          v._val--;
+          if( v._val<= 0 ) pairs2.remove(p1);
+        }
+      }
+      return (2.0 * intersection) / union;
+    }
+  }
+
+  public static double canberra_distance(double[] a, double[] b) {
+    double sum = 0;
+    for (int i = 0; i < a.length; i++) {
+      final double num = FastMath.abs(a[i] - b[i]);
+      final double denom = FastMath.abs(a[i]) + FastMath.abs(b[i]);
+      sum += num == 0.0 && denom == 0.0 ? 0.0 : num / denom;
+    }
+    return sum;
+  }
+
+  public static double earth_movers_distance(double[] a, double[] b) {
+    double lastDistance = 0.0D;
+    double totalDistance = 0.0D;
+
+    for(int i = 0; i < a.length; ++i) {
+      double currentDistance = a[i] + lastDistance - b[i];
+      totalDistance += FastMath.abs(currentDistance);
+      lastDistance = currentDistance;
+    }
+    return totalDistance;
+  }
+
+
+  public static float canberra_distance(float[] a, float[] b) {
+    float sum = 0;
+    for (int i = 0; i < a.length; i++) {
+      final float num = FastMath.abs(a[i] - b[i]);
+      final float denom = FastMath.abs(a[i]) + FastMath.abs(b[i]);
+      sum += num == 0.0 && denom == 0.0 ? 0.0 : num / denom;
+    }
+    return sum;
+  }
+
+  public static float earth_movers_distance(float[] a, float[] b) {
+    float lastDistance = 0;
+    float totalDistance = 0;
+
+    for(int i = 0; i < a.length; ++i) {
+      float currentDistance = a[i] + lastDistance - b[i];
+      totalDistance += FastMath.abs(currentDistance);
+      lastDistance = currentDistance;
+    }
+    return totalDistance;
   }
 }

@@ -2,14 +2,12 @@ package quora;
 
 
 import edu.emory.mathcs.nlp.common.util.IOUtils;
-import edu.emory.mathcs.nlp.common.util.Language;
 import edu.emory.mathcs.nlp.component.template.NLPComponent;
 import edu.emory.mathcs.nlp.component.template.feature.Field;
 import edu.emory.mathcs.nlp.component.template.lexicon.GlobalLexica;
 import edu.emory.mathcs.nlp.component.template.lexicon.GlobalLexicon;
 import edu.emory.mathcs.nlp.component.template.node.NLPNode;
 import edu.emory.mathcs.nlp.component.tokenizer.Tokenizer;
-import edu.emory.mathcs.nlp.component.tokenizer.token.Token;
 import edu.emory.mathcs.nlp.decode.NLPDecoder;
 import info.debatty.java.stringsimilarity.*;
 import info.debatty.java.stringsimilarity.interfaces.StringDistance;
@@ -47,7 +45,7 @@ public class Preprocess extends MRTask<Preprocess> {
   static final String[] NAMES = new String[]{
     "id",  // the row id
     // some basic feature computations on the raw sentences
-    "q1_words", "q2_words", "abs_words","common_words","fuzzy_matched","common_caps","q1_chars","q1_fuzzy_chars","q2_chars","q2_fuzzy_chars","abs_chars","abs_fuzzy_chars","q1_punc_count","q2_punc_count","q1_caps","q2_caps","abs_caps",
+    "q1_words", "q2_words", "abs_words","common_words","fuzzy_matched","common_caps","q1_chars","q1_fuzzy_chars","q2_chars","q2_fuzzy_chars","abs_chars","abs_fuzzy_chars","q1_punc_count","q2_punc_count","q1_caps","q2_caps","abs_caps","hash_equals","match_strike","fuzz_strike",
     // some metrics between the simplified sentences
     "cosine","dameru","jaccard","jwink","leven","lcsub","ngram","leven_norm","optim_align","qgram","sdice",
     // metrics on the POS tags
@@ -56,7 +54,8 @@ public class Preprocess extends MRTask<Preprocess> {
     "wes1_sum","wes2_sum",   // word-emedding vectors summed (not including stop words), then the vector is summed
     "wess1_sum","wess2_sum", // word-embedding vectors RMS and summed
     "abs_wes_sum", "abs_wess_sum", // absolute differences of the above
-    "wes_cosine", "wess_cosine"    // the cosine distances for each flavor
+    "wes_cosine", "wess_cosine",    // the cosine distances for each flavor
+    "wes_earth", "wes_canberra"
   };
 
   Preprocess(boolean test) {
@@ -154,6 +153,10 @@ public class Preprocess extends MRTask<Preprocess> {
 
         q1 = cs[Q1].isNA(r)?"":cs[Q1].atStr(bstr, r).toString();
         q2 = cs[Q2].isNA(r)?"":cs[Q2].atStr(bstr, r).toString();
+        int common_caps = countCapsCommon(q1, q2);
+        int q1_caps = countCaps(q1);
+        int q2_caps = countCaps(q2);
+
         int q1_punc_count = countPunc(q1);
         int q2_punc_count = countPunc(q2);
         // drop question marks
@@ -182,16 +185,15 @@ public class Preprocess extends MRTask<Preprocess> {
         int q2_words = w2.length;
         int common_words = countCommon(w1, w2);
         int fuzzy_matched = countCommon(f1, f2);
-        int common_caps = countCapsCommon(w1, w2);
-        int q1_chars = q1.length();
+        int q1_chars = fuzzyChars(w1);
+        int q2_chars =fuzzyChars(w2);
         int q1_fuzzy_chars = fuzzyChars(f1);
-        int q2_chars = q2.length();
         int q2_fuzzy_chars = fuzzyChars(f2);
         int abs_chars = Math.abs(q1_chars - q2_chars);
         int abs_fuzzy_chars = Math.abs(q1_fuzzy_chars - q2_fuzzy_chars);
-        int q1_caps = countCaps(q1);
-        int q2_caps = countCaps(q2);
         int abs_caps = Math.abs(q1_caps - q2_caps);
+        double matchStrike = Utils.StrikeAMatch.compareStrings(w1,w2);
+        double fuzzStrike  = Utils.StrikeAMatch.compareStrings(f1,f2);
         ncs[ncs_idx++].addNum(q1_words);
         ncs[ncs_idx++].addNum(q2_words);
         ncs[ncs_idx++].addNum(Math.abs(q1_words - q2_words));
@@ -209,9 +211,11 @@ public class Preprocess extends MRTask<Preprocess> {
         ncs[ncs_idx++].addNum(q1_caps);
         ncs[ncs_idx++].addNum(q2_caps);
         ncs[ncs_idx++].addNum(abs_caps);
-
+        ncs[ncs_idx++].addNum(q1.hashCode()==q2.hashCode()?1:0);
+        ncs[ncs_idx++].addNum(matchStrike);
+        ncs[ncs_idx++].addNum(fuzzStrike);
         // similarity features on fuzzed words
-        getDistances(q1, q2, dists);
+        getDistances(sf1, sf2, dists);
         for (double dist : dists) ncs[ncs_idx++].addNum(dist);
 
         // string similarity on POS tags
@@ -242,6 +246,9 @@ public class Preprocess extends MRTask<Preprocess> {
         ncs[ncs_idx++].addNum(abs_wess_sum);
         ncs[ncs_idx++].addNum(wes_cosine);
         ncs[ncs_idx++].addNum(wess_cosine);
+        ncs[ncs_idx++].addNum(Utils.earth_movers_distance(we_s1,we_s2));
+        ncs[ncs_idx++].addNum(Utils.canberra_distance(we_s1,we_s2));
+
 //        for(int i=0;i<we_s1.length;++i)
 //          ncs[ncs_idx++].addNum(Math.abs(we_s1[i] - we_s2[i]));
         if (!_test) ncs[ncs_idx].addNum(cs[cs.length - 1].at8(r));
@@ -391,16 +398,15 @@ public class Preprocess extends MRTask<Preprocess> {
   }
 
   // count common capitalized words
-  int countCapsCommon(String[] w1, String[] w2) {
+  int countCapsCommon(String w1, String w2) {
     HashSet<String> caps1 = new HashSet<>();
-    for(String w: w1) {
-      if( w.length()<1 ) continue;
-      char c = w.charAt(0);
-      if( 'A' <= c && c <= 'Z' ) caps1.add(w);
+    for(int i=0;i<w1.length();++i) {
+      char c = w1.charAt(i);
+      if( 'A' <= c && c <= 'Z' ) caps1.add(""+c);
     }
     int cnt=0;
-    for(String w: w2) {
-      if( caps1.contains(w) ) cnt++;
+    for(int i=0;i<w2.length();++i) {
+      if( caps1.contains(""+w2.charAt(i)) ) cnt++;
     }
     return cnt;
   }
