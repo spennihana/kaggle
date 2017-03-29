@@ -34,12 +34,14 @@ public class WordEmbeddingsReader extends Iced {
     v= new double[_len];
     final double[] _v=v;
     new MRTask() {
+      boolean _found=false;
       @Override public void map(Chunk[] cs) {
+        if( _found ) return;
         BufferedString bstr = new BufferedString();
         for(int i=0;i<cs[0]._len;++i) {
           String s = cs[0].isNA(i)?"":cs[0].atStr(bstr,i).toString();
           if( w.equals(s) ) {
-            System.out.println("Found word...");
+            _found=true;
             for(int c=1;c<cs.length;++c)
               _v[c-1] = cs[c].atd(i);
             return;

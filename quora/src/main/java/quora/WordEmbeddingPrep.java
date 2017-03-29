@@ -81,6 +81,11 @@ public class WordEmbeddingPrep extends MRTask<WordEmbeddingPrep> {
 
   public static void main(String[] args) {
     H2O.main(args);
+    try {
+      Thread.sleep(2000);
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+    }
     WordEmbeddingsReader em = new WordEmbeddingsReader();
     em.read("./lib/w2vec_models/gw2vec",300);
 
