@@ -51,22 +51,13 @@ public class Preprocess extends MRTask<Preprocess> {
     // some metrics between the simplified sentences
     "cosine","dameru","jaccard","jwink","leven","lcsub","ngram","leven_norm","optim_align","qgram","sdice",
     // metrics on the POS tags
-    "cosine_pos","dameru_pos","jaccard_pos","jwink_pos","leven_pos","lcsub_pos","ngram_pos","leven_norm_pos","optim_align_pos","qgram_pos","sdice_pos",
+//    "cosine_pos","dameru_pos","jaccard_pos","jwink_pos","leven_pos","lcsub_pos","ngram_pos","leven_norm_pos","optim_align_pos","qgram_pos","sdice_pos",
     // word embedding metrics
     "wes1_sum","wes2_sum",   // word-emedding vectors summed (not including stop words), then the vector is summed
     "wess1_sum","wess2_sum", // word-embedding vectors RMS and summed
     "abs_wes_sum", "abs_wess_sum", // absolute differences of the above
     "wes_cosine", "wess_cosine"    // the cosine distances for each flavor
   };
-
-  String[] getNames() {
-    if( _test ) return NAMES;
-    else{
-      String[] names = Arrays.copyOf(NAMES,NAMES.length+1);
-      names[names.length-1] = "is_duplicate";
-      return names;
-    }
-  }
 
   Preprocess(boolean test) {
     _test=test;
@@ -82,11 +73,11 @@ public class Preprocess extends MRTask<Preprocess> {
       e.printStackTrace();
     }
 
-    _tok=edu.emory.mathcs.nlp.common.util.NLPUtils.createTokenizer(Language.ENGLISH);
-    System.out.println("Tokenizer loaded");
+//    _tok=edu.emory.mathcs.nlp.common.util.NLPUtils.createTokenizer(Language.ENGLISH);
+//    System.out.println("Tokenizer loaded");
     // part of speech tagger
-    _pos=edu.emory.mathcs.nlp.common.util.NLPUtils.getComponent("edu/emory/mathcs/nlp/models/en-pos.xz");
-    System.out.println("POS tagger loaded");
+//    _pos=edu.emory.mathcs.nlp.common.util.NLPUtils.getComponent("edu/emory/mathcs/nlp/models/en-pos.xz");
+//    System.out.println("POS tagger loaded");
     _lex =new GlobalLexica(d.createElement("mocked"));
     // load lexica
 //    _lex.setAmbiguityClasses(getLex("edu/emory/mathcs/nlp/lexica/en-ambiguity-classes-simplified-lowercase.xz", Field.word_form_simplified_lowercase));
@@ -163,21 +154,23 @@ public class Preprocess extends MRTask<Preprocess> {
 
         q1 = cs[Q1].isNA(r)?"":cs[Q1].atStr(bstr, r).toString();
         q2 = cs[Q2].isNA(r)?"":cs[Q2].atStr(bstr, r).toString();
+        int q1_punc_count = countPunc(q1);
+        int q2_punc_count = countPunc(q2);
         // drop question marks
         q1 = q1.replaceAll("(?!')\\p{P}", "").toLowerCase();  // try to leave contractions as they are...
         q2 = q2.replaceAll("(?!')\\p{P}", "").toLowerCase();
         w1 = q1.split(" ");
         w2 = q2.split(" ");
 
-        List<Token> t1 = _tok.tokenize(q1);
-        List<Token> t2 = _tok.tokenize(q2);
-        NLPNode[] nodes1 = nlpd.toNodeArray(t1);
-        NLPNode[] nodes2 = nlpd.toNodeArray(t2);
+//        List<Token> t1 = _tok.tokenize(q1);
+//        List<Token> t2 = _tok.tokenize(q2);
+//        NLPNode[] nodes1 = nlpd.toNodeArray(t1);
+//        NLPNode[] nodes2 = nlpd.toNodeArray(t2);
 
-        _lex.process(nodes1);
-        _pos.process(nodes1);
-        _lex.process(nodes2);
-        _pos.process(nodes2);
+//        _lex.process(nodes1);
+//        _pos.process(nodes1);
+//        _lex.process(nodes2);
+//        _pos.process(nodes2);
 
         // remove stop words
         f1 = toStringA(w1,_stopWords);
@@ -196,8 +189,6 @@ public class Preprocess extends MRTask<Preprocess> {
         int q2_fuzzy_chars = fuzzyChars(f2);
         int abs_chars = Math.abs(q1_chars - q2_chars);
         int abs_fuzzy_chars = Math.abs(q1_fuzzy_chars - q2_fuzzy_chars);
-        int q1_punc_count = countPunc(q1);
-        int q2_punc_count = countPunc(q2);
         int q1_caps = countCaps(q1);
         int q2_caps = countCaps(q2);
         int abs_caps = Math.abs(q1_caps - q2_caps);
@@ -225,10 +216,10 @@ public class Preprocess extends MRTask<Preprocess> {
 
         // string similarity on POS tags
         // only get pos tags for non-stop words
-        String pos1 = posTags(nodes1);
-        String pos2 = posTags(nodes2);
-        getDistances(pos1, pos2, dists2);
-        for (double dist : dists2) ncs[ncs_idx++].addNum(dist);
+//        String pos1 = posTags(nodes1);
+//        String pos2 = posTags(nodes2);
+//        getDistances(pos1, pos2, dists2);
+//        for (double dist : dists2) ncs[ncs_idx++].addNum(dist);
 //        assert ncs_idx == 37;
 
         // word-embeddings features
