@@ -58,6 +58,12 @@ public class Preprocess extends MRTask<Preprocess> {
     "wes_earth", "wes_canberra"
   };
 
+
+  private static String[] name2 = new String[]{
+    "q1_words","q2_words","abs_wprds","fuzzy_matched","q1_chars","q1_fuzzy_chars","q2_chars","q2_fuzzy_chars","abs_chars","abs_fuzzy_chars",
+    "hash_equals","match_strike","fuzz_strike","wes_cosine","wes_earth", "wes_canberra"
+  };
+
   Preprocess(boolean test) {
     _test=test;
     Q1=_test?1:3;
@@ -95,7 +101,6 @@ public class Preprocess extends MRTask<Preprocess> {
 
     _em = new WordEmbeddingsReader();
     _em.read("./lib/w2vec_models/gw2vec",300);
-    _em.setupLocal();
 
     System.out.println("google vecs loaded");
 
@@ -249,8 +254,8 @@ public class Preprocess extends MRTask<Preprocess> {
         ncs[ncs_idx++].addNum(Utils.earth_movers_distance(we_s1,we_s2));
         ncs[ncs_idx++].addNum(Utils.canberra_distance(we_s1,we_s2));
 
-//        for(int i=0;i<we_s1.length;++i)
-//          ncs[ncs_idx++].addNum(Math.abs(we_s1[i] - we_s2[i]));
+        for(int i=0;i<we_s1.length;++i)
+          ncs[ncs_idx++].addNum(Math.abs(we_s1[i] - we_s2[i]));
         if (!_test) ncs[ncs_idx].addNum(cs[cs.length - 1].at8(r));
       } catch (Exception e) {
         System.out.println("q1= " + q1);
@@ -415,13 +420,13 @@ public class Preprocess extends MRTask<Preprocess> {
     H2OApp.main(args);
 
     boolean train=true;
-    int id=5;
+    int id=7;
     String outpath= train?"./data/train_feats"+id+".csv":"./data/test_feats"+id+".csv";
     String path = train?"./data/train_clean.csv":"./data/test_clean.csv";
     String name = train?"train":"test";
     String key= train?"train_feats":"test_feats";
 
-    int nembeddings=0;
+    int nembeddings=300;
 
     String[] names = Arrays.copyOf(Preprocess.NAMES, Preprocess.NAMES.length+nembeddings + ((train?1:0)));
     int n=Preprocess.NAMES.length;

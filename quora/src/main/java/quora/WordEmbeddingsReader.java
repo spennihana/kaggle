@@ -10,10 +10,7 @@ import water.fvec.Vec;
 import water.parser.BufferedString;
 import water.util.IcedHashMap;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -31,6 +28,37 @@ public class WordEmbeddingsReader extends Iced {
     Arrays.fill(types, Vec.T_NUM);
     types[0]=Vec.T_STR;
     _embeddings = KaggleUtils.importParseFrame(path, "embeddings", types);
+    _cache = new Reduce().doAll(_embeddings).r;
+    _embeddings.delete();
+  }
+
+  void read2(String path, int len) {
+    _cache = new IcedHashMap<>();
+    _len=len;
+    int print=20000;
+    try(BufferedReader in = new BufferedReader(new FileReader(new File(path)))) {
+      String line;
+      while( (line=in.readLine())!=null ) {
+        int x=0;
+        int d=0;
+        String w=null;
+        double[] v = new double[300];
+        for(int c=0;c<line.length();++c) {
+          if( line.charAt(c)==' ' ) {
+            if( w==null ) w=line.substring(x,c);
+            else          v[d++] = Double.valueOf(line.substring(x,c));
+            x=c+1;
+          }
+        }
+        _cache.put(w,v);
+        if(_cache.size() % print==0) {
+          System.out.println("Read " + _cache.size() + " word vectors out of 3,000,000");
+//          print <<= 1;
+        }
+      }
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
   }
 
   void setupLocal() {

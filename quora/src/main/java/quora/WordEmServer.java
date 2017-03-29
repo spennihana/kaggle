@@ -13,7 +13,7 @@ public class WordEmServer {
     H2OApp.main(args);
     _em = new WordEmbeddingsReader();
     _em.read("./lib/w2vec_models/gw2vec",300);
-    _em.setupLocal();
+//    _em.setupLocal();
     Log.info("Server ready...");
   }
 }
