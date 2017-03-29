@@ -126,12 +126,8 @@ public class JEMD {
       }
       long delta = (long) (Math.pow(2.0,Math.ceil(Math.log((double) (U)) / Math.log(2.0))));
 
-      Vector<Long> d = new Vector<Long>();
-      Vector<Integer> prev = new Vector<Integer>();
-      for (int i = 0; i < numNodes; i++) {
-        d.add(0l);
-        prev.add(0);
-      }
+      long[] d = new long[numNodes];
+      int[] prev = new int[numNodes];
       delta = 1;
       while (true) { // until we break when S or T is empty
         long maxSupply = 0;
@@ -156,7 +152,7 @@ public class JEMD {
         // if (-e[l]<delta) delta= e[k];
         int to = l[0];
         do {
-          int from = prev.get(to);
+          int from = prev[to];
           assert (from != to);
 
           // residual
@@ -176,7 +172,7 @@ public class JEMD {
         // augment delta flow from k to l (backwards actually...)
         to = l[0];
         do {
-          int from = prev.get(to);
+          int from = prev[to];
           assert (from != to);
 
           // TODO - might do here O(n) can be done in O(1)
@@ -222,7 +218,7 @@ public class JEMD {
       return dist;
     }
 
-    void computeShortestPath(Vector<Long> d, Vector<Integer> prev, int from, Vector<List<Edge1>> costForward, Vector<List<Edge2>> costBackward, long[] e, int[] l) {
+    void computeShortestPath(long[] d, int[] prev, int from, Vector<List<Edge1>> costForward, Vector<List<Edge2>> costBackward, long[] e, int[] l) {
       // Making heap (all inf except 0, so we are saving comparisons...)
       Vector<Edge3> Q = new Vector<Edge3>();
       for (int i = 0; i < numNodes; i++) {
@@ -249,15 +245,12 @@ public class JEMD {
         j++;
       }
 
-      Vector<Boolean> finalNodesFlg = new Vector<Boolean>();
-      for (int i = 0; i < numNodes; i++) {
-        finalNodesFlg.add(false);
-      }
+      boolean[] finalNodesFlg = new boolean[numNodes];
       do {
         int u = Q.get(0)._to;
 
-        d.set(u, Q.get(0)._dist); // final distance
-        finalNodesFlg.set(u, true);
+        d[u] = Q.get(0)._dist; // final distance
+        finalNodesFlg[u] = true;
         if (e[u] < 0) {
           l[0] = u;
           break;
@@ -268,23 +261,23 @@ public class JEMD {
         // neighbors of u
         for (Edge1 it : costForward.get(u)) {
           assert (it._reduced_cost >= 0);
-          long alt = d.get(u) + it._reduced_cost;
+          long alt = d[u] + it._reduced_cost;
           int v = it._to;
           if ((nodesToQ.get(v) < Q.size())
             && (alt < Q.get(nodesToQ.get(v))._dist)) {
             heapDecreaseKey(Q, nodesToQ, v, alt);
-            prev.set(v, u);
+            prev[v]=u;
           }
         }
         for (Edge2 it : costBackward.get(u)) {
           if (it._residual_capacity > 0) {
             assert (it._reduced_cost >= 0);
-            long alt = d.get(u) + it._reduced_cost;
+            long alt = d[u] + it._reduced_cost;
             int v = it._to;
             if ((nodesToQ.get(v) < Q.size())
               && (alt < Q.get(nodesToQ.get(v))._dist)) {
               heapDecreaseKey(Q, nodesToQ, v, alt);
-              prev.set(v, u);
+              prev[v] = u;
             }
           }
         }
@@ -293,24 +286,21 @@ public class JEMD {
 
       for (int _from = 0; _from < numNodes; ++_from) {
         for (Edge1 it : costForward.get(_from)) {
-          if (finalNodesFlg.get(_from)) {
-            it._reduced_cost += d.get(_from) - d.get(l[0]);
+          if (finalNodesFlg[_from]) {
+            it._reduced_cost += d[_from] - d[l[0]];
           }
-          if (finalNodesFlg.get(it._to)) {
-            it._reduced_cost -= d.get(it._to) - d.get(l[0]);
+          if (finalNodesFlg[it._to]) {
+            it._reduced_cost -= d[it._to] - d[l[0]];
           }
         }
-      }
-
-      // reduced costs and capacity for backward edges
-      // (c[j,i]-pi[j]+pi[i])
-      for (int _from = 0; _from < numNodes; ++_from) {
+        // reduced costs and capacity for backward edges
+        // (c[j,i]-pi[j]+pi[i])
         for (Edge2 it : costBackward.get(_from)) {
-          if (finalNodesFlg.get(_from)) {
-            it._reduced_cost += d.get(_from) - d.get(l[0]);
+          if (finalNodesFlg[_from]) {
+            it._reduced_cost += d[_from] - d[l[0]];
           }
-          if (finalNodesFlg.get(it._to)) {
-            it._reduced_cost -= d.get(it._to) - d.get(l[0]);
+          if (finalNodesFlg[it._to]) {
+            it._reduced_cost -= d[it._to] - d[l[0]];
           }
         }
       }

@@ -188,9 +188,24 @@ public class Utils {
   }
 
   public static double wmd(String[] w1, String[] w2, WordEmbeddingsReader em) {
+
+    HashMap<String, double[]> embeddings = new HashMap<>();
     int len_t1=0, len_t2=0;
-    for(String w: w1) if(em._cache.contains(w)) len_t1++;
-    for(String w: w2) if( em._cache.contains(w)) len_t2++;
+    for(String w: w1) {
+      double[] d = em._cache.get(w);
+      if( d==null ) continue;
+      embeddings.put(w,d);
+      len_t1++;
+    }
+    for(String w: w2) {
+      if( embeddings.get(w)!=null ) len_t2++;
+      else {
+        double[] d = em._cache.get(w);
+        if( d==null ) continue;
+        embeddings.put(w,d);
+        len_t2++;
+      }
+    }
     if( len_t1==0 || len_t2==0 ) return Double.POSITIVE_INFINITY;
 
     HashSet<String> docset1 = new HashSet<>();
@@ -200,7 +215,7 @@ public class Utils {
     String[] doc2 = new String[len_t2];
     int c=0;
     for(String w: w1) {
-      if( em._cache.contains(w) ) {
+      if( embeddings.get(w)!=null ) {
         docset1.add(w);
         doc1[c++]=w;
         IcedInt v = dict.get(w);
@@ -210,7 +225,7 @@ public class Utils {
     }
     c=0;
     for(String w: w2) {
-      if( em._cache.contains(w) ) {
+      if( embeddings.get(w)!=null ) {
         docset2.add(w);
         doc2[c++]=w;
         IcedInt v = dict.get(w);
@@ -226,11 +241,11 @@ public class Utils {
     double sum=0;
     for(String t1: dict.keySet()) {
       i++;
-      j=0;
+      j=-1;
       for(String t2: dict.keySet()) {
         j++;
         if( !docset1.contains(t1) || !docset2.contains(t2) ) continue;
-        distMat[i][j] = ArrayUtils.l2norm2(em._cache.get(t1),em._cache.get(t2));
+        distMat[i][j] = ArrayUtils.l2norm2(embeddings.get(t1),embeddings.get(t2));
         sum += distMat[i][j];
       }
     }
