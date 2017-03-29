@@ -10,15 +10,12 @@ import water.parser.BufferedString;
 import water.util.Log;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.ByteChannel;
 import java.util.Arrays;
 
-import static quora.WordEmServer.FAIL;
-import static quora.WordEmServer.FETCH;
-import static quora.WordEmServer.SENTINEL;
+import static quora.WordEmServer.*;
 
 public class WordEmbeddingsReader extends Iced {
   Frame _embeddings;
@@ -62,9 +59,9 @@ public class WordEmbeddingsReader extends Iced {
     return _v;
   }
 
-  static double[] get(String word, TCPSendThread st, ByteChannel chan) throws UnsupportedEncodingException {
+  static double[] get(String word, TCPSendThread st, ByteChannel chan) {
     AutoBuffer ab = new AutoBuffer();
-    ab.put1((byte)FETCH).put4(1+word.getBytes("UTF-8").length).put1((byte)0xef);
+    ab.put1((byte)FETCH).put4(1+word.getBytes().length).put1((byte)0xef);
     ab.putStr(word);
     st.sendMessage(ab, chan);
     // now block on chan to read

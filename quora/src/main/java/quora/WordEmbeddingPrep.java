@@ -79,12 +79,16 @@ public class WordEmbeddingPrep extends MRTask<WordEmbeddingPrep> {
 
       for(String w: w1) {
         double[] c = _cache.get(w);
+        if( c==null )
+          _cache.put(w, c=WordEmbeddingsReader.get(w,_sendThread,_chan));
         min_we[0] = reduceMin(min_we[0], c);
         max_we[0] = reduceMax(max_we[0], c);
       }
 
       for(String w: w2) {
         double[] c = _cache.get(w);
+        if( c==null )
+          _cache.put(w, c=WordEmbeddingsReader.get(w,_sendThread,_chan));
         min_we[1] = reduceMin(min_we[1], c);
         max_we[1] = reduceMax(max_we[1], c);
       }
