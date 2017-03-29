@@ -19,7 +19,7 @@ import java.util.Arrays;
 public class WordEmbeddingsReader extends Iced {
   Frame _embeddings;
   int _len;
-  IcedHashMap<String, double[]> _cache;  // node local cache
+  transient IcedHashMap<String, double[]> _cache;  // node local cache
   // path to embeddings file
   // length of embedding vector (not including word...)
   void read(String path, int len) {
@@ -29,7 +29,7 @@ public class WordEmbeddingsReader extends Iced {
     types[0]=Vec.T_STR;
     _embeddings = KaggleUtils.importParseFrame(path, "embeddings", types);
     _cache = new Reduce().doAll(_embeddings).r;
-    _embeddings.delete();
+//    _embeddings.delete();
   }
 
   void read2(String path, int len) {
@@ -62,8 +62,10 @@ public class WordEmbeddingsReader extends Iced {
   }
 
   void setupLocal() {
-    _cache = new Reduce().doAll(_embeddings).r;
-    _embeddings.delete();
+    if( _cache!=null ) {
+      _cache = new Reduce().doAll(_embeddings).r;
+    }
+//    _embeddings.delete();
   }
 
   static class Reduce extends MRTask<Reduce> {
@@ -82,7 +84,9 @@ public class WordEmbeddingsReader extends Iced {
     @Override public void reduce(Reduce t) { if( r!=t.r ) r.putAll(t.r); }
   }
 
-  public double[] find(final String w) { return _cache.get(w); }
+  public double[] find(final String w) {
+    return _cache.get(w);
+  }
 
   static double[] get2(String word) {
     try {

@@ -101,6 +101,7 @@ public class Preprocess extends MRTask<Preprocess> {
     _stopWords = new HashSet<>();
     _stopWords.addAll((Set<String>)_lex.getStopWords().getLexicon());
 
+    _em.setupLocal();
     System.out.println(_em._cache.size() + " vecs loaded");
 
     // init all the string distance measures one time here
