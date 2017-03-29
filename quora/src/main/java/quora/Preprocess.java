@@ -277,6 +277,7 @@ public class Preprocess extends MRTask<Preprocess> {
     for(int i=0;i<ws.length;++i) ws[i]=wss[i]=0;
     for (String s: words) {
       double[] f = _em._cache.get(s);
+      if( f==null ) continue;
       add(ws, f);
       addSq(wss, f);
     }
