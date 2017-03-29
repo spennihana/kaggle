@@ -3,9 +3,11 @@ package quora;
 import org.apache.commons.math3.util.FastMath;
 import water.MRTask;
 import water.fvec.Chunk;
+import water.util.ArrayUtils;
 import water.util.IcedInt;
 
 import java.util.HashMap;
+import java.util.HashSet;
 
 public class Utils {
 
@@ -183,5 +185,76 @@ public class Utils {
       lastDistance = currentDistance;
     }
     return totalDistance;
+  }
+
+  public static double wmd(String[] w1, String[] w2, WordEmbeddingsReader em) {
+    int len_t1=0, len_t2=0;
+    for(String w: w1) if(em._cache.contains(w)) len_t1++;
+    for(String w: w2) if( em._cache.contains(w)) len_t2++;
+    if( len_t1==0 || len_t2==0 ) return Double.POSITIVE_INFINITY;
+
+    HashSet<String> docset1 = new HashSet<>();
+    HashSet<String> docset2 = new HashSet<>();
+    HashMap<String,IcedInt> dict = new HashMap<>();
+    String[] doc1 = new String[len_t1];
+    String[] doc2 = new String[len_t2];
+    int c=0;
+    for(String w: w1) {
+      if( em._cache.contains(w) ) {
+        docset1.add(w);
+        doc1[c++]=w;
+        IcedInt v = dict.get(w);
+        if( v==null ) dict.put(w, v=new IcedInt(0));
+        v._val++;
+      }
+    }
+    c=0;
+    for(String w: w2) {
+      if( em._cache.contains(w) ) {
+        docset2.add(w);
+        doc2[c++]=w;
+        IcedInt v = dict.get(w);
+        if( v==null ) dict.put(w, v=new IcedInt(0));
+        v._val++;
+      }
+    }
+
+    if( dict.size()==1 ) return 0;
+
+    double[][] distMat = new double[dict.size()][dict.size()];
+    int i=-1,j;
+    double sum=0;
+    for(String t1: dict.keySet()) {
+      i++;
+      j=0;
+      for(String t2: dict.keySet()) {
+        j++;
+        if( !docset1.contains(t1) || !docset2.contains(t2) ) continue;
+        distMat[i][j] = ArrayUtils.l2norm2(em._cache.get(t1),em._cache.get(t2));
+        sum += distMat[i][j];
+      }
+    }
+    if( sum==0 ) return Double.POSITIVE_INFINITY;
+
+    return JEMD.emdHat(doc2bow(doc1,dict), doc2bow(doc2,dict),distMat,-1);
+  }
+
+
+  public static double[] doc2bow(String[] w, HashMap<String,IcedInt> dict) {
+    HashMap<String,IcedInt> counter = new HashMap<>();
+    for(String s: w) {
+      IcedInt v = counter.get(s);
+      if( v==null ) counter.put(s, v=new IcedInt(0));
+      v._val++;
+    }
+
+    double[] res = new double[dict.size()];
+    int i=0;
+    for(String v: dict.keySet()) {
+      IcedInt ii = counter.get(v);
+      if( ii==null ) continue;
+      res[i++] = (double)ii._val / (double)w.length;
+    }
+    return res;
   }
 }

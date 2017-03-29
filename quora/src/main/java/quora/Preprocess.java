@@ -45,7 +45,9 @@ public class Preprocess extends MRTask<Preprocess> {
   static final String[] NAMES = new String[]{
     "id",  // the row id
     // some basic feature computations on the raw sentences
-    "q1_words", "q2_words", "abs_words","common_words","fuzzy_matched","common_caps","q1_chars","q1_fuzzy_chars","q2_chars","q2_fuzzy_chars","abs_chars","abs_fuzzy_chars","q1_punc_count","q2_punc_count","q1_caps","q2_caps","abs_caps","hash_equals","match_strike","fuzz_strike",
+    "q1_words", "q2_words", "abs_words","common_words","fuzzy_matched","common_caps","q1_chars","q1_fuzzy_chars","q2_chars",
+    "q2_fuzzy_chars","abs_chars","abs_fuzzy_chars","q1_punc_count","q2_punc_count","q1_caps","q2_caps","abs_caps","hash_equals",
+    "match_strike","fuzz_strike",
     // some metrics between the simplified sentences
     "cosine","dameru","jaccard","jwink","leven","lcsub","ngram","leven_norm","optim_align","qgram","sdice",
     // metrics on the POS tags
@@ -55,7 +57,8 @@ public class Preprocess extends MRTask<Preprocess> {
     "wess1_sum","wess2_sum", // word-embedding vectors RMS and summed
     "abs_wes_sum", "abs_wess_sum", // absolute differences of the above
     "wes_cosine", "wess_cosine",    // the cosine distances for each flavor
-    "wes_earth", "wes_canberra"
+    "wes_earth", "wes_canberra",
+    "wmd"
   };
 
 
@@ -253,9 +256,10 @@ public class Preprocess extends MRTask<Preprocess> {
         ncs[ncs_idx++].addNum(wess_cosine);
         ncs[ncs_idx++].addNum(Utils.earth_movers_distance(we_s1,we_s2));
         ncs[ncs_idx++].addNum(Utils.canberra_distance(we_s1,we_s2));
+        ncs[ncs_idx++].addNum(Utils.wmd(f1,f2,_em));
 
-        for(int i=0;i<we_s1.length;++i)
-          ncs[ncs_idx++].addNum(Math.abs(we_s1[i] - we_s2[i]));
+//        for(int i=0;i<we_s1.length;++i)
+//          ncs[ncs_idx++].addNum(Math.abs(we_s1[i] - we_s2[i]));
         if (!_test) ncs[ncs_idx].addNum(cs[cs.length - 1].at8(r));
       } catch (Exception e) {
         System.out.println("q1= " + q1);
@@ -426,7 +430,7 @@ public class Preprocess extends MRTask<Preprocess> {
     String name = train?"train":"test";
     String key= train?"train_feats":"test_feats";
 
-    int nembeddings=300;
+    int nembeddings=0;//300;
 
     String[] names = Arrays.copyOf(Preprocess.NAMES, Preprocess.NAMES.length+nembeddings + ((train?1:0)));
     int n=Preprocess.NAMES.length;
