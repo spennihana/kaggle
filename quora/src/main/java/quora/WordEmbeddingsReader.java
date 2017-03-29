@@ -7,8 +7,8 @@ import water.MRTask;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
-import water.nbhm.NonBlockingHashMap;
 import water.parser.BufferedString;
+import water.util.IcedHashMap;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -22,7 +22,7 @@ import java.util.Arrays;
 public class WordEmbeddingsReader extends Iced {
   Frame _embeddings;
   int _len;
-  transient NonBlockingHashMap<String, double[]> _cache;  // node local cache
+  transient IcedHashMap<String, double[]> _cache;  // node local cache
   // path to embeddings file
   // length of embedding vector (not including word...)
   void read(String path, int len) {
@@ -33,33 +33,28 @@ public class WordEmbeddingsReader extends Iced {
     _embeddings = KaggleUtils.importParseFrame(path, "embeddings", types);
   }
 
-  void setupLocal() {_cache =new NonBlockingHashMap<>();}
-
-  public double[] find(final String w) {
-    double[] v = _cache.get(w);
-    if( v!=null ) return v;
-
-    v= new double[_len];
-    final double[] _v=v;
-    new MRTask() {
-      boolean _found=false;
-      @Override public void map(Chunk[] cs) {
-        if( _found ) return;
-        BufferedString bstr = new BufferedString();
-        for(int i=0;i<cs[0]._len;++i) {
-          String s = cs[0].isNA(i)?"":cs[0].atStr(bstr,i).toString();
-          if( w.equals(s) ) {
-            _found=true;
-            for(int c=1;c<cs.length;++c)
-              _v[c-1] = cs[c].atd(i);
-            return;
-          }
-        }
-      }
-    }.doAll(_embeddings);
-    _cache.putIfAbsent(w,_v);
-    return _v;
+  void setupLocal() {
+    _cache = new Reduce().doAll(_embeddings).r;
+    _embeddings.delete();
   }
+
+  static class Reduce extends MRTask<Reduce> {
+    IcedHashMap<String, double[]> r;
+    @Override public void setupLocal() { r=new IcedHashMap<>(); }
+    @Override public void map(Chunk[] cs) {
+      BufferedString bstr = new BufferedString();
+      double[] v = new double[300];
+      for(int i=0;i<cs[0]._len;++i) {
+        if( cs[0].isNA(i) ) continue;
+        String s = cs[0].atStr(bstr,i).toString();
+        for(int c=1;c<cs.length;++c) v[c-1] = cs[c].atd(i);
+        r.put(s,v);
+      }
+    }
+    @Override public void reduce(Reduce t) { if( r!=t.r ) r.putAll(t.r); }
+  }
+
+  public double[] find(final String w) { return _cache.get(w); }
 
   static double[] get2(String word) {
     try {
