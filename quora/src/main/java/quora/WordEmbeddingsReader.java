@@ -1,21 +1,24 @@
 package quora;
 
 
-import water.*;
+import water.Iced;
+import water.KaggleUtils;
+import water.MRTask;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.nbhm.NonBlockingHashMap;
 import water.parser.BufferedString;
-import water.util.Log;
 
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.channels.ByteChannel;
+import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLEncoder;
 import java.util.Arrays;
-
-import static quora.WordEmServer.*;
 
 public class WordEmbeddingsReader extends Iced {
   Frame _embeddings;
@@ -33,7 +36,7 @@ public class WordEmbeddingsReader extends Iced {
 
   void setupLocal() {_cache =new NonBlockingHashMap<>();}
 
-  double[] find(final String w) {
+  public double[] find(final String w) {
     double[] v = _cache.get(w);
     if( v!=null ) return v;
 
@@ -59,55 +62,37 @@ public class WordEmbeddingsReader extends Iced {
     return _v;
   }
 
-  static double[] get(String word, TCPSendThread st, ByteChannel chan) {
-    AutoBuffer ab = new AutoBuffer();
-    ab.put1((byte)FETCH).put4(1+word.getBytes().length).put1((byte)0xef);
-    ab.putStr(word);
-    st.sendMessage(ab, chan);
-    // now block on chan to read
-
+  static double[] get2(String word) {
     try {
-      ByteBuffer bb = ByteBuffer.allocate(1 + 4 + 1).order(ByteOrder.nativeOrder());  // makes a new HeapByteBuffer
-      bb.position(0);
-      while (bb.hasRemaining()) // read first INIT_BUF bytes into the buffer
-        chan.read(bb);
-      Log.info("received data...");
-      bb.flip();  // flip buffer for reading
-      int method = bb.get();
-      int sz = bb.getInt();
-      int sentinel = (0xFF) & bb.get();
-      if (sentinel != SENTINEL)
-        throw new IOException("Missing EOM sentinel when opening new tcp channel");
-      // read in the rest of the payload from the remote process
-      ByteBuffer buf = ByteBuffer.allocate(sz).order(ByteOrder.nativeOrder());
-      while (buf.hasRemaining())
-        chan.read(buf);
-      buf.flip();
-      switch(method) {
-        case FAIL: FAIL(buf);
-        case FETCH: return parseDoubles(buf);
-        default: throw new RuntimeException("unknown method: " + method);
+      URL md = openURLConnection(word);
+      try (BufferedReader in = new BufferedReader(new InputStreamReader(md.openStream()))) {
+        String foo = in.readLine();
+        return null;
+      } catch (IOException e) {
+        throw new RuntimeException(e);
       }
-    } catch(IOException e) {
+    } catch(MalformedURLException | UnsupportedEncodingException e) {
       throw new RuntimeException(e);
     }
   }
 
-  static double[] parseDoubles(ByteBuffer bb) {
-    int ndoubles = bb.getInt();
-    double[] d = new double[ndoubles];
-    for(int i=0;i<d.length;i++) d[i]=bb.getDouble();
-    return d;
-  }
-
-  static void FAIL(ByteBuffer bb) {
-    int sz = bb.get();
-    byte[] s;
-    if( sz<=0 ) s= "Failed to retrieve market data.".getBytes();
-    else {
-      s = new byte[sz - 1];
-      bb.get(s);
+  static URL openURLConnection(String word) throws MalformedURLException, UnsupportedEncodingException {
+    URL md = new URL("192.168.1.145:54321/3/WordEm?word="+ URLEncoder.encode(word, "UTF-8"));
+    HttpURLConnection.setFollowRedirects(false);
+    HttpURLConnection connection = null;
+    try {
+      connection = (HttpURLConnection) md.openConnection();
+    } catch (IOException e) {
+      e.printStackTrace();
     }
-    throw new RuntimeException(new String(s));
+    try {
+      System.out.println("Response code = " + connection.getResponseCode());
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+    String header = connection.getHeaderField("location");
+    if (header != null)
+      System.out.println("Redirected to " + header);
+    return md;
   }
 }

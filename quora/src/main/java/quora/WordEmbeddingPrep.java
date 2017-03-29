@@ -1,6 +1,9 @@
 package quora;
 
-import water.*;
+import water.H2O;
+import water.Job;
+import water.Key;
+import water.MRTask;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.NewChunk;
@@ -8,9 +11,7 @@ import water.fvec.Vec;
 import water.nbhm.NonBlockingHashMap;
 import water.parser.BufferedString;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.nio.channels.ByteChannel;
+import java.io.IOException;
 import java.util.Arrays;
 
 import static quora.Utils.*;
@@ -18,8 +19,6 @@ import static water.KaggleUtils.importParseFrame;
 
 
 public class WordEmbeddingPrep extends MRTask<WordEmbeddingPrep> {
-  private static final String WORDSERVER_IP="192.168.1.145";
-  private static final int    WORDSERVER_P = 34534;
 
   private static final int ID=0;
   private final int Q1;
@@ -27,9 +26,6 @@ public class WordEmbeddingPrep extends MRTask<WordEmbeddingPrep> {
   private final boolean _test;
 
   // remote word embedding server bits
-  private transient ByteChannel _chan;
-  private transient TCPSendThread _sendThread;
-
   private transient NonBlockingHashMap<String, double[]> _cache;
 
   WordEmbeddingPrep(boolean test) {
@@ -39,17 +35,6 @@ public class WordEmbeddingPrep extends MRTask<WordEmbeddingPrep> {
   }
 
   @Override public void setupLocal() {
-    try {
-      (_sendThread= TCPSendThread.client(InetAddress.getByName(WORDSERVER_IP),WORDSERVER_P)).start();
-    } catch (UnknownHostException e) {
-      throw new RuntimeException(e);
-    }
-
-    try {
-      _chan = TCPSendThread.openChan(InetAddress.getByName(WORDSERVER_IP), WORDSERVER_P);
-    } catch (UnknownHostException e) {
-      throw new RuntimeException(e);
-    }
     _cache = new NonBlockingHashMap<>();
   }
   @Override public void map(Chunk[] cs, NewChunk[] ncs) {
@@ -79,20 +64,21 @@ public class WordEmbeddingPrep extends MRTask<WordEmbeddingPrep> {
 
       for(String w: w1) {
         double[] c = _cache.get(w);
-        if( c==null )
-          _cache.put(w, c=WordEmbeddingsReader.get(w,_sendThread,_chan));
+        if( c==null ) {
+          _cache.put(w, c = WordEmbeddingsReader.get2(w));
+        }
         min_we[0] = reduceMin(min_we[0], c);
         max_we[0] = reduceMax(max_we[0], c);
       }
 
       for(String w: w2) {
         double[] c = _cache.get(w);
-        if( c==null )
-          _cache.put(w, c=WordEmbeddingsReader.get(w,_sendThread,_chan));
+        if( c==null ) {
+          _cache.put(w, c = WordEmbeddingsReader.get2(w));
+        }
         min_we[1] = reduceMin(min_we[1], c);
         max_we[1] = reduceMax(max_we[1], c);
       }
-
 
       // write out the abs diff in the min/max vecs
       for(int i=0;i<min_we[0].length;i++)
@@ -104,7 +90,7 @@ public class WordEmbeddingPrep extends MRTask<WordEmbeddingPrep> {
     }
   }
 
-  public static void main(String[] args) {
+  public static void main(String[] args) throws IOException {
     H2O.main(args);
 
     boolean train=true;
@@ -121,6 +107,7 @@ public class WordEmbeddingPrep extends MRTask<WordEmbeddingPrep> {
 
     long s = System.currentTimeMillis();
     WordEmbeddingPrep wep = new WordEmbeddingPrep(!train);
+
     Frame out = wep.doAll(nouts, Vec.T_NUM, fr).outputFrame(Key.make(key),null,null);
     System.out.println("all done: " + (System.currentTimeMillis()-s)/1000. + " seconds");
 
