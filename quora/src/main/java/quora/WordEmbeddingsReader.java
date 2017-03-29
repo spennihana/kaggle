@@ -19,7 +19,7 @@ import java.util.Arrays;
 public class WordEmbeddingsReader extends Iced {
   Frame _embeddings;
   int _len;
-  transient IcedHashMap<String, double[]> _cache;  // node local cache
+  IcedHashMap<String, double[]> _cache;  // node local cache
   // path to embeddings file
   // length of embedding vector (not including word...)
   void read(String path, int len) {

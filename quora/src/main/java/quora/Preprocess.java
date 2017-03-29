@@ -40,7 +40,7 @@ public class Preprocess extends MRTask<Preprocess> {
   transient HashSet<String> _stopWords;
 
   transient StringDistance[] _simMetrics;
-  private transient WordEmbeddingsReader _em;
+  private WordEmbeddingsReader _em;
 
   static final String[] NAMES = new String[]{
     "id",  // the row id
@@ -68,6 +68,8 @@ public class Preprocess extends MRTask<Preprocess> {
     _test=test;
     Q1=_test?1:3;
     Q2=_test?2:4;
+    _em = new WordEmbeddingsReader();
+    _em.read("./lib/w2vec_models/gw2vec",300);
   }
 
   @Override public void setupLocal() {
@@ -99,10 +101,7 @@ public class Preprocess extends MRTask<Preprocess> {
     _stopWords = new HashSet<>();
     _stopWords.addAll((Set<String>)_lex.getStopWords().getLexicon());
 
-    _em = new WordEmbeddingsReader();
-    _em.read("./lib/w2vec_models/gw2vec",300);
-
-    System.out.println("google vecs loaded");
+    System.out.println(_em._cache.size() + " vecs loaded");
 
     // init all the string distance measures one time here
     _simMetrics = new StringDistance[NDIST_METRICS];
