@@ -8,6 +8,7 @@ import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.NewChunk;
 import water.fvec.Vec;
+import water.nbhm.NonBlockingHashMap;
 import water.parser.BufferedString;
 
 import java.util.Arrays;
@@ -31,6 +32,7 @@ public class WordEmbeddingPrep extends MRTask<WordEmbeddingPrep> {
     _em=em;
   }
 
+  @Override public void setupLocal() {_em._cache = new NonBlockingHashMap<>(); }
   @Override public void map(Chunk[] cs, NewChunk[] ncs) {
     BufferedString bstr = new BufferedString();
     double[][] min_we = new double[2][300];

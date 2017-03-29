@@ -7,15 +7,15 @@ import water.MRTask;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
+import water.nbhm.NonBlockingHashMap;
 import water.parser.BufferedString;
 
 import java.util.Arrays;
-import java.util.HashMap;
 
 public class WordEmbeddingsReader extends Iced {
   Frame _embeddings;
   int _len;
-  transient HashMap<String, double[]> _cache;
+  transient NonBlockingHashMap<String, double[]> _cache;  // node local cache
   // path to embeddings file
   // length of embedding vector (not including word...)
   void read(String path, int len) {
@@ -27,7 +27,6 @@ public class WordEmbeddingsReader extends Iced {
   }
 
   double[] find(final String w) {
-    if( _cache==null ) _cache=new HashMap<>();
     double[] v = _cache.get(w);
     if( v!=null ) return v;
 
@@ -49,7 +48,7 @@ public class WordEmbeddingsReader extends Iced {
         }
       }
     }.doAll(_embeddings);
-    _cache.put(w,_v);
+    _cache.putIfAbsent(w,_v);
     return _v;
   }
 }
