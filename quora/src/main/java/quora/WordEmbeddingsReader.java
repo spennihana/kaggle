@@ -66,6 +66,7 @@ public class WordEmbeddingsReader extends Iced {
 
   void setupLocal() {
     if( _cache==null ) {
+      _cache=new NonBlockingHashMap<>();
       for( String s: _wordvecs.keySet()) {
         IcedDouble[] id = _wordvecs.get(s);
         double[] d = new double[id.length];

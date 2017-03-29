@@ -69,7 +69,7 @@ public class Preprocess extends MRTask<Preprocess> {
     Q1=_test?1:3;
     Q2=_test?2:4;
     _em = new WordEmbeddingsReader();
-    _em.read("./lib/w2vec_models/gw2vec",300);
+    _em.read("./lib/w2vec_models/gw2vec_sample",300);
   }
 
   @Override public void setupLocal() {
