@@ -10,16 +10,16 @@ import water.fvec.Vec;
 import water.parser.BufferedString;
 
 import java.util.Arrays;
+import java.util.HashMap;
 
 public class WordEmbeddingsReader extends Iced {
-
   Frame _embeddings;
-  double[] _v;
-
+  int _len;
+  transient HashMap<String, double[]> _cache;
   // path to embeddings file
   // length of embedding vector (not including word...)
   void read(String path, int len) {
-    _v = new double[len];
+    _len=len;
     byte[] types = new byte[len+1];
     Arrays.fill(types, Vec.T_NUM);
     types[0]=Vec.T_STR;
@@ -27,6 +27,12 @@ public class WordEmbeddingsReader extends Iced {
   }
 
   double[] find(final String w) {
+    if( _cache==null ) _cache=new HashMap<>();
+    double[] v = _cache.get(w);
+    if( v!=null ) return v;
+
+    v= new double[_len];
+    final double[] _v=v;
     new MRTask() {
       @Override public void map(Chunk[] cs) {
         BufferedString bstr = new BufferedString();
@@ -41,6 +47,7 @@ public class WordEmbeddingsReader extends Iced {
         }
       }
     }.doAll(_embeddings);
+    _cache.put(w,_v);
     return _v;
   }
 }
