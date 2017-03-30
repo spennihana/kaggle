@@ -257,6 +257,7 @@ public class Preprocess extends MRTask<Preprocess> {
         ncs[ncs_idx++].addNum(Utils.earth_movers_distance(we_s1,we_s2));
         ncs[ncs_idx++].addNum(Utils.canberra_distance(we_s1,we_s2));
         ncs[ncs_idx++].addNum(Utils.wmd(f1,f2,_em));
+        ncs[ncs_idx++].addNum(Utils.qratio(sf1,sf2));
 
 //        for(int i=0;i<we_s1.length;++i)
 //          ncs[ncs_idx++].addNum(Math.abs(we_s1[i] - we_s2[i]));

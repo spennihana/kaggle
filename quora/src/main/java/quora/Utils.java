@@ -272,4 +272,29 @@ public class Utils {
     }
     return res;
   }
+
+  public static double qratio(String a, String b) {
+    return 100*DiffLib.Levenshtein.ratio(a,b);
+  }
+
+  public static double wratio(String a, String b) {
+    boolean try_partial;
+    double unbase_scale = .95;
+    double partial_scale = .90;
+    double base = qratio(a,b);
+    double len_ratio = (Math.max(a.length(), b.length())) / Math.min(a.length(), b.length());
+
+    try_partial = len_ratio > 1.5;
+    if( len_ratio > 8 ) partial_scale = 0.6;
+    if( try_partial ) {
+      double partial = 0;
+    }
+    return 0;
+  }
+
+  public static double partial_ratio(String s1, String s2) {
+    String shorter=s1, longer=s2;
+    if( s2.length() < s1.length() ) { shorter=s2; longer=s1; }
+    return 0;
+  }
 }
