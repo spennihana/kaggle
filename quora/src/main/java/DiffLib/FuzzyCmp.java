@@ -25,9 +25,7 @@ public class FuzzyCmp {
   public FuzzyCmp(){}
   public FuzzyCmp(String s1, String s2) {_s1=s1; _s2=s2;}
 
-  public void comptue() {
-    String[] w1 = _s1.split(" ");
-    String[] w2 = _s2.split(" ");
+  public void comptue(String[] w1, String[] w2) {
     double[] bothSetRatios = both_token_set_ratio(w1,w2);
     double[] bothSortRatios= both_token_sort_ratio(w1,w2);
     _partialRatio = partial_ratio(_s1,_s2);

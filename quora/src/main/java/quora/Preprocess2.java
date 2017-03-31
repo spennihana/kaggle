@@ -2,12 +2,6 @@ package quora;
 
 
 import DiffLib.FuzzyCmp;
-import edu.emory.mathcs.nlp.common.util.IOUtils;
-import edu.emory.mathcs.nlp.component.template.NLPComponent;
-import edu.emory.mathcs.nlp.component.template.feature.Field;
-import edu.emory.mathcs.nlp.component.template.lexicon.GlobalLexica;
-import edu.emory.mathcs.nlp.component.template.lexicon.GlobalLexicon;
-import edu.emory.mathcs.nlp.component.tokenizer.Tokenizer;
 import info.debatty.java.stringsimilarity.*;
 import info.debatty.java.stringsimilarity.interfaces.StringDistance;
 import water.*;
@@ -16,13 +10,10 @@ import water.fvec.Frame;
 import water.fvec.NewChunk;
 import water.fvec.Vec;
 import water.parser.BufferedString;
-import water.util.ArrayUtils;
 
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-import java.io.ObjectInputStream;
 import java.util.*;
 
+import static quora.Utils.STOP_WORDS;
 import static water.KaggleUtils.importParseFrame;
 
 public class Preprocess2 extends MRTask<Preprocess2> {
@@ -33,61 +24,43 @@ public class Preprocess2 extends MRTask<Preprocess2> {
   private final int Q2;
   private final boolean _test;
 
-  transient Tokenizer _tok;
-  transient NLPComponent _pos;
-  transient GlobalLexica _lex;
   transient HashSet<String> _stopWords;
 
   transient StringDistance[] _simMetrics;
-  private WordEmbeddingsReader _em;
+//  private WordEmbeddingsReader _em;
 
   static final String[] NAMES = new String[]{
     "id",  // the row id
-    // some basic feature computations on the raw sentences
-    "q1_words", "q2_words", "abs_words","common_words","fuzzy_matched","common_caps","q1_chars","q1_fuzzy_chars","q2_chars",
-    "q2_fuzzy_chars","abs_chars","abs_fuzzy_chars","q1_punc_count","q2_punc_count","q1_caps","q2_caps","abs_caps","hash_equals",
-    "match_strike","fuzz_strike",
+    // no stop words removed, no tolowercase (just punctuation removed)
+    "common_words",
+    "common_rat",
+    "strike_match",
+    "zrat",
     // distance metrics
-    // some metrics between the simplified sentences
     "cosine","dameru","jaccard","jwink","leven","lcsub","ngram","leven_norm","optim_align","qgram","sdice",
-    // word embedding metrics
-    "wes1_sum","wes2_sum",   // word-emedding vectors summed (not including stop words), then the vector is summed
-    "wess1_sum","wess2_sum", // word-embedding vectors RMS and summed
-    "abs_wes_sum", "abs_wess_sum", // absolute differences of the above
-    "wes_cosine", "wess_cosine",    // the cosine distances for each flavor
-    "wes_earth", "wes_canberra",
-    "wmd", "qrat", "wrat", "partial_rat", "partial_set_rat", "partial_sort_rat", "set_rat","sort_rat"
-  };
+    "qrat", "wrat", "partial_rat", "partial_set_rat", "partial_sort_rat", "set_rat","sort_rat",
 
-
-  private static String[] name2 = new String[]{
-    "q1_words","q2_words","abs_wprds","fuzzy_matched","q1_chars","q1_fuzzy_chars","q2_chars","q2_fuzzy_chars","abs_chars","abs_fuzzy_chars",
-    "hash_equals","match_strike","fuzz_strike","wes_cosine","wes_earth", "wes_canberra"
+    // now the "fuzzed" versions (stop words removed, tolower'd)
+    "common_words2",
+    "common_rat2",
+    "strike_match2",
+//     distance metrics
+    "cosine2","dameru2","jaccard2","jwink2","leven2","lcsub2","ngram2","leven_norm2","optim_align2","qgram2","sdice2",
+    "qrat2", "wrat2", "partial_rat2", "partial_set_rat2", "partial_sort_rat2", "set_rat2","sort_rat2",
   };
 
   Preprocess2(boolean test) {
     _test=test;
     Q1=_test?1:3;
     Q2=_test?2:4;
-    _em = new WordEmbeddingsReader();
+//    _em = new WordEmbeddingsReader();
   }
 
   @Override public void setupLocal() {
-    org.w3c.dom.Document d=null;
-    try {
-      d = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
-    } catch (ParserConfigurationException e) {
-      e.printStackTrace();
-    }
-
-    _lex =new GlobalLexica(d.createElement("mocked"));
-    _lex.setStopWords(getLex("edu/emory/mathcs/nlp/lexica/en-stop-words-simplified-lowercase.xz", Field.word_form_simplified_lowercase));
     _stopWords = new HashSet<>();
-    _stopWords.addAll((Set<String>)_lex.getStopWords().getLexicon());
-    System.out.println("stop words loaded");
-    _em.read2("./lib/w2vec_models/gw2vec",300);
-//    _em.setupLocal();
-    System.out.println(_em._cache.size() + " vecs loaded");
+    Collections.addAll(_stopWords, STOP_WORDS);
+//    _em.read2("./lib/w2vec_models/gw2vec",300);
+//    System.out.println(_em._cache.size() + " vecs loaded");
 
     // init all the string distance measures one time here
     _simMetrics = new StringDistance[NDIST_METRICS];
@@ -103,30 +76,18 @@ public class Preprocess2 extends MRTask<Preprocess2> {
     _simMetrics[9] = new QGram();
     _simMetrics[10]= new SorensenDice();
     System.out.println("Distance metrics initialized");
-
     System.out.print("Node local init done");
-  }
-
-
-  static <T> GlobalLexicon<T> getLex(String path, Field f) {
-    T lex;
-    try(ObjectInputStream oin = IOUtils.createArtifactObjectInputStream(path)) {
-      lex=(T)oin.readObject();
-    } catch( Exception e) {
-      throw new RuntimeException(e);
-    }
-    return new GlobalLexicon(lex, f,"");
   }
 
   @Override public void map(Chunk[] cs, NewChunk[] ncs) {
     BufferedString bstr = new BufferedString();
     FuzzyCmp fc = new FuzzyCmp();
     double[] dists = new double[NDIST_METRICS];  // on fuzzed words (no punc, lower case, no stops)
-    float[] we_s1 = new float[300]; // word embeddings vector
-    float[] we_ss1= new float[300]; // sum squared of word embeddings
-
-    float[] we_s2 = new float[300]; // word embeddings vector
-    float[] we_ss2= new float[300]; // sum squared of word embeddings
+//    float[] we_s1 = new float[300]; // word embeddings vector
+//    float[] we_ss1= new float[300]; // sum squared of word embeddings
+//
+//    float[] we_s2 = new float[300]; // word embeddings vector
+//    float[] we_ss2= new float[300]; // sum squared of word embeddings
     for(int r=0;r<cs[0]._len;++r) {
       String q1=null;
       String q2=null;
@@ -143,86 +104,52 @@ public class Preprocess2 extends MRTask<Preprocess2> {
 
         q1 = cs[Q1].isNA(r)?"":cs[Q1].atStr(bstr, r).toString();
         q2 = cs[Q2].isNA(r)?"":cs[Q2].atStr(bstr, r).toString();
-        int common_caps = countCapsCommon(q1, q2);
-        int q1_caps = countCaps(q1);
-        int q2_caps = countCaps(q2);
 
-        int q1_punc_count = countPunc(q1);
-        int q2_punc_count = countPunc(q2);
         // drop question marks
-        q1 = q1.replaceAll("(?!')\\p{P}", "").toLowerCase();  // try to leave contractions as they are...
-        q2 = q2.replaceAll("(?!')\\p{P}", "").toLowerCase();
+        q1 = q1.replaceAll("(?!')\\p{P}", ""); // remove punc except single apostrophe
+        q2 = q2.replaceAll("(?!')\\p{P}", "");
         w1 = q1.split(" ");
         w2 = q2.split(" ");
 
+        // non-fuzzy features
+        int common_words = countCommon(w1,w2);
+        double common_rat = countCommonRatio(w1,w2);
+        double strike_match = Utils.StrikeAMatch.compareStrings(w1,w2);
+        double zrat = DiffLib.Levenshtein.ratio(q1,q2);
+        getDistances(q1,q2,dists);
+        fc._s1=q1; fc._s2=q2;
+        fc.comptue(w1,w2);
+        ncs[ncs_idx++].addNum(common_words);
+        ncs[ncs_idx++].addNum(common_rat);
+        ncs[ncs_idx++].addNum(strike_match);
+        for( double dist : dists ) ncs[ncs_idx++].addNum(dist);
+        ncs[ncs_idx++].addNum(fc._qratio);
+        ncs[ncs_idx++].addNum(fc._wratio);
+        ncs[ncs_idx++].addNum(fc._partialRatio);
+        ncs[ncs_idx++].addNum(fc._partialTokenSetRatio);
+        ncs[ncs_idx++].addNum(fc._partialTokenSortRatio);
+        ncs[ncs_idx++].addNum(fc._tokenSetRatio);
+        ncs[ncs_idx++].addNum(fc._tokenSortRatio);
+
+
+        // now remove stop words and tolower
         // remove stop words
         f1 = toStringA(w1,_stopWords);
         f2 = toStringA(w2,_stopWords);
         sf1 = Utils.join(f1);
         sf2 = Utils.join(f2);
+
+        common_words = countCommon(w1,w2);
+        common_rat = countCommonRatio(w1,w2);
+        strike_match = Utils.StrikeAMatch.compareStrings(w1,w2);
+        getDistances(sf1,sf2,dists);
         fc._s1=sf1; fc._s2=sf2;
-        fc.comptue();
-
-        int q1_words = w1.length;
-        int q2_words = w2.length;
-        int common_words = countCommon(w1, w2);
-        int fuzzy_matched = countCommon(f1, f2);
-        int q1_chars = fuzzyChars(w1);
-        int q2_chars =fuzzyChars(w2);
-        int q1_fuzzy_chars = fuzzyChars(f1);
-        int q2_fuzzy_chars = fuzzyChars(f2);
-        int abs_chars = Math.abs(q1_chars - q2_chars);
-        int abs_fuzzy_chars = Math.abs(q1_fuzzy_chars - q2_fuzzy_chars);
-        int abs_caps = Math.abs(q1_caps - q2_caps);
-        double matchStrike = Utils.StrikeAMatch.compareStrings(w1,w2);
-        double fuzzStrike  = Utils.StrikeAMatch.compareStrings(f1,f2);
-        ncs[ncs_idx++].addNum(q1_words);
-        ncs[ncs_idx++].addNum(q2_words);
-        ncs[ncs_idx++].addNum(Math.abs(q1_words - q2_words));
+        fc.comptue(f1,f2);
         ncs[ncs_idx++].addNum(common_words);
-        ncs[ncs_idx++].addNum(fuzzy_matched);
-        ncs[ncs_idx++].addNum(common_caps);
-        ncs[ncs_idx++].addNum(q1_chars);
-        ncs[ncs_idx++].addNum(q1_fuzzy_chars);
-        ncs[ncs_idx++].addNum(q2_chars);
-        ncs[ncs_idx++].addNum(q2_fuzzy_chars);
-        ncs[ncs_idx++].addNum(abs_chars);
-        ncs[ncs_idx++].addNum(abs_fuzzy_chars);
-        ncs[ncs_idx++].addNum(q1_punc_count);
-        ncs[ncs_idx++].addNum(q2_punc_count);
-        ncs[ncs_idx++].addNum(q1_caps);
-        ncs[ncs_idx++].addNum(q2_caps);
-        ncs[ncs_idx++].addNum(abs_caps);
-        ncs[ncs_idx++].addNum(q1.hashCode()==q2.hashCode()?1:0);
-        ncs[ncs_idx++].addNum(matchStrike);
-        ncs[ncs_idx++].addNum(fuzzStrike);
-        // similarity features on fuzzed words
-        getDistances(sf1, sf2, dists);
-        for (double dist : dists) ncs[ncs_idx++].addNum(dist);
-
-        // word-embeddings features
-        wordEmVecs(f1, we_s1, we_ss1);
-        wordEmVecs(f2, we_s2, we_ss2);
-
-        float wes1_sum = ArrayUtils.sum(we_s1);
-        float wes2_sum = ArrayUtils.sum(we_s2);
-        float abs_wes_sum = Math.abs(wes1_sum - wes2_sum);
-        float wess1_sum = ArrayUtils.sum(we_ss1);
-        float wess2_sum = ArrayUtils.sum(we_ss2);
-        float abs_wess_sum = Math.abs(wess1_sum - wess2_sum);
-        float wes_cosine = cosine_distance(we_s1, we_s2);
-        float wess_cosine = cosine_distance(we_ss1, we_ss2);
-        ncs[ncs_idx++].addNum(wes1_sum);
-        ncs[ncs_idx++].addNum(wes2_sum);
-        ncs[ncs_idx++].addNum(wess1_sum);
-        ncs[ncs_idx++].addNum(wess2_sum);
-        ncs[ncs_idx++].addNum(abs_wes_sum);
-        ncs[ncs_idx++].addNum(abs_wess_sum);
-        ncs[ncs_idx++].addNum(wes_cosine);
-        ncs[ncs_idx++].addNum(wess_cosine);
-        ncs[ncs_idx++].addNum(Utils.earth_movers_distance(we_s1,we_s2));
-        ncs[ncs_idx++].addNum(Utils.canberra_distance(we_s1,we_s2));
-        ncs[ncs_idx++].addNum(Utils.wmd(f1,f2,_em));
+        ncs[ncs_idx++].addNum(common_rat);
+        ncs[ncs_idx++].addNum(strike_match);
+        ncs[ncs_idx++].addNum(zrat);
+        for( double dist : dists ) ncs[ncs_idx++].addNum(dist);
         ncs[ncs_idx++].addNum(fc._qratio);
         ncs[ncs_idx++].addNum(fc._wratio);
         ncs[ncs_idx++].addNum(fc._partialRatio);
@@ -259,17 +186,17 @@ public class Preprocess2 extends MRTask<Preprocess2> {
   }
 
   // single vec becomes a normalized sum...
-  void wordEmVecs(String[] words, float[] ws, float[] wss) {
-    for(int i=0;i<ws.length;++i) ws[i]=wss[i]=0;
-    for (String s: words) {
-      double[] f = _em._cache.get(s);
-      if( f==null ) continue;
-      add(ws, f);
-      addSq(wss, f);
-    }
-    norm(ws);
-    norm(sqrt(wss));
-  }
+//  void wordEmVecs(String[] words, float[] ws, float[] wss) {
+//    for(int i=0;i<ws.length;++i) ws[i]=wss[i]=0;
+//    for (String s: words) {
+//      double[] f = _em._cache.get(s);
+//      if( f==null ) continue;
+//      add(ws, f);
+//      addSq(wss, f);
+//    }
+//    norm(ws);
+//    norm(sqrt(wss));
+//  }
 
   static void norm(float[] a) {
     float ss=0;
@@ -298,7 +225,7 @@ public class Preprocess2 extends MRTask<Preprocess2> {
     dists[1 /*dameru*/]      = _simMetrics[1].distance(s1,s2);
     dists[2 /*jaccard*/]     = _simMetrics[2].distance(s1,s2);
     dists[3 /*jwink*/]       = _simMetrics[3].distance(s1,s2);
-    dists[4 /*leven*/]       = _simMetrics[4].distance(s1,s2);
+    dists[4 /*leven*/]       = DiffLib.Levenshtein.lev_dist(s1,s2);//_simMetrics[4].distance(s1,s2);
     dists[5 /*lcsub*/]       = _simMetrics[5].distance(s1,s2);
     dists[6 /*ngram*/]       = _simMetrics[6].distance(s1,s2);
     dists[7 /*leven_norm*/]  = _simMetrics[7].distance(s1,s2);
@@ -312,8 +239,9 @@ public class Preprocess2 extends MRTask<Preprocess2> {
   static String[] toStringA(String[] w, Set<String> stops) {
     ArrayList<String> words = new ArrayList<>();
     for(int i=1;i<w.length-1;++i) {
-      if( stops.contains(w[i]) ) continue;
-      words.add(w[i]);
+      String wi = w[i].toLowerCase();
+      if( stops.contains(wi) ) continue;
+      words.add(wi);
     }
     return words.toArray(new String[words.size()]);
   }
@@ -356,6 +284,19 @@ public class Preprocess2 extends MRTask<Preprocess2> {
     return cnt;
   }
 
+  double countCommonRatio(String[] q1, String[] q2) {
+    HashSet<String> s1 = new HashSet<>();
+    Collections.addAll(s1,q1);
+    HashSet<String> s2 = new HashSet<>();
+    Collections.addAll(s2,q2);
+
+    if( s1.size()==0 || s2.size()==0 ) return 0;
+    int c1=0,c2=0;
+    for(String s: s1) if( s2.contains(s) ) c1++;
+    for(String s: s2) if( s1.contains(s) ) c2++;
+    return (double)(c1+c2) / (double) (s1.size() + s2.size());
+  }
+
   // count common capitalized words
   int countCapsCommon(String w1, String w2) {
     HashSet<String> caps1 = new HashSet<>();
@@ -374,7 +315,7 @@ public class Preprocess2 extends MRTask<Preprocess2> {
     H2OApp.main(args);
 
     boolean train=true;
-    int id=8;
+    int id=12;
     String outpath= train?"./data/train_feats"+id+".csv":"./data/test_feats"+id+".csv";
     String path = train?"./data/train_clean.csv":"./data/test_clean.csv";
     String name = train?"train":"test";
