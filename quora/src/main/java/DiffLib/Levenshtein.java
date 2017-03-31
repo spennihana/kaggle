@@ -119,13 +119,12 @@ public class Levenshtein {
     return e;
   }
 
+  public static int[][] matching_groups(String s1, String s2) {return matching_groups(edit_ops(s1,s2),s1,s2);}
+
+  // rip off of https://github.com/miohtama/python-Levenshtein/blob/master/Levenshtein.c#L6375-L6501
   public static int[][] matching_groups(LevEdit[] editops, String s1, String s2) {
     // matching blocks between edits
-    int minlen = Math.min(s1.length(), s2.length());
     ArrayList<int[]> groups = new ArrayList<>();
-    int lb=0, ub=0;
-
-
     int s=0,d=0;
     int o=0;
     for(int i=editops.length;i!=0;) {
@@ -138,7 +137,7 @@ public class Levenshtein {
       }
       char type=op._t;
       switch( type ) {
-        case 's':
+        case 's': // substitute
           do {
             op=editops[o++];
             s++;
@@ -146,14 +145,14 @@ public class Levenshtein {
             i--;
           } while(i!=0 && op._t==type && s==op._s && d==op._d);
           break;
-        case 'd':
+        case 'd': // delete
           do {
             op=editops[o++];
             s++;
             i--;
           } while(i!=0 && op._t==type && s==op._s && d==op._d);
           break;
-        case 'i':
+        case 'i': // insert
           do {
             op=editops[o++];
             d++;
@@ -218,44 +217,44 @@ public class Levenshtein {
       new TestCase("123","123",0,"", "003330"),
       new TestCase("1234","1234",0,"", "004440"),
       new TestCase("12345","12345",0,"", "005550"),
-      new TestCase("passwosd","passwosd",0,"", "008880"),
+      new TestCase("password","password",0,"", "008880"),
       new TestCase("","1",1,"i00", "010"),
       new TestCase("","12",2,"i00i01", "020"),
       new TestCase("","123",3,"i00i01i02", "030"),
       new TestCase("","1234",4,"i00i01i02i03", "040"),
       new TestCase("","12345",5,"i00i01i02i03i04", "050"),
-      new TestCase("","passwosd",8,"i00i01i02i03i04i05i06i07", "080"),
+      new TestCase("","password",8,"i00i01i02i03i04i05i06i07", "080"),
       new TestCase("1","",1,"d00", "100"),
       new TestCase("12","",2,"d00d10", "200"),
       new TestCase("123","",3,"d00d10d20", "300"),
       new TestCase("1234","",4,"d00d10d20d30", "400"),
       new TestCase("12345","",5,"d00d10d20d30d40", "500"),
-      new TestCase("passwosd","",8,"d00d10d20d30d40d50d60d70", "800"),
-      new TestCase("passwosd","1passwosd",1,"i00", "018890"),
-      new TestCase("passwosd","p1asswosd",1,"i11", "001127890"),
-      new TestCase("passwosd","pa1sswosd",1,"i22", "002236890"),
-      new TestCase("passwosd","pas1swosd",1,"i33", "003345890"),
-      new TestCase("passwosd","pass1wosd",1,"i44", "004454890"),
-      new TestCase("passwosd","passw1osd",1,"i55", "005563890"),
-      new TestCase("passwosd","passwo1sd",1,"i66", "006672890"),
-      new TestCase("passwosd","passwos1d",1,"i77", "007781890"),
-      new TestCase("passwosd","passwosd1",1,"i88", "008890"),
-      new TestCase("passwosd","asswosd",1,"d00", "107870"),
-      new TestCase("passwosd","psswosd",1,"d11", "001216870"),
-      new TestCase("passwosd","paswosd",1,"d33", "003434870"),
-      new TestCase("passwosd","paswosd",1,"d33", "003434870"),
-      new TestCase("passwosd","passosd",1,"d44", "004543870"),
-      new TestCase("passwosd","passwsd",1,"d55", "005652870"),
-      new TestCase("passwosd","passwod",1,"d66", "006761870"),
-      new TestCase("passwosd","passwos",1,"d77", "007870"),
-      new TestCase("passwosd","Xasswosd",1,"s00", "117880"),
-      new TestCase("passwosd","pXsswosd",1,"s11", "001226880"),
-      new TestCase("passwosd","paXswosd",1,"s22", "002335880"),
-      new TestCase("passwosd","pasXwosd",1,"s33", "003444880"),
-      new TestCase("passwosd","passXosd",1,"s44", "004553880"),
-      new TestCase("passwosd","passwXsd",1,"s55", "005662880"),
-      new TestCase("passwosd","passwoXd",1,"s66", "006771880"),
-      new TestCase("passwosd","passwosX",1,"s77", "007880"),
+      new TestCase("password","",8,"d00d10d20d30d40d50d60d70", "800"),
+      new TestCase("password","1password",1,"i00", "018890"),
+      new TestCase("password","p1assword",1,"i11", "001127890"),
+      new TestCase("password","pa1ssword",1,"i22", "002236890"),
+      new TestCase("password","pas1sword",1,"i33", "003345890"),
+      new TestCase("password","pass1word",1,"i44", "004454890"),
+      new TestCase("password","passw1ord",1,"i55", "005563890"),
+      new TestCase("password","passwo1rd",1,"i66", "006672890"),
+      new TestCase("password","passwor1d",1,"i77", "007781890"),
+      new TestCase("password","password1",1,"i88", "008890"),
+      new TestCase("password","assword",1,"d00", "107870"),
+      new TestCase("password","pssword",1,"d11", "001216870"),
+      new TestCase("password","pasword",1,"d33", "003434870"),
+      new TestCase("password","pasword",1,"d33", "003434870"),
+      new TestCase("password","passord",1,"d44", "004543870"),
+      new TestCase("password","passwrd",1,"d55", "005652870"),
+      new TestCase("password","passwod",1,"d66", "006761870"),
+      new TestCase("password","passwor",1,"d77", "007870"),
+      new TestCase("password","Xassword",1,"s00", "117880"),
+      new TestCase("password","pXssword",1,"s11", "001226880"),
+      new TestCase("password","paXsword",1,"s22", "002335880"),
+      new TestCase("password","pasXword",1,"s33", "003444880"),
+      new TestCase("password","passXord",1,"s44", "004553880"),
+      new TestCase("password","passwXrd",1,"s55", "005662880"),
+      new TestCase("password","passwoXd",1,"s66", "006771880"),
+      new TestCase("password","passworX",1,"s77", "007880"),
       new TestCase("12345678","23456781",2,"d00i87", "107880"),
       new TestCase("12345678","34567812",4,"d00d10i86i87", "206880"),
       new TestCase("12345678","45678123",6,"d00d10d20i85i86i87", "305880"),
@@ -272,7 +271,7 @@ public class Levenshtein {
       new TestCase("12345678","87654321",8,"s00s11s22s33s44s55s66s77", "880"),
       new TestCase("Mississippi","ippississiM",6,"i00i01s02d810d910s1010", "13711110"),
       new TestCase("eieio","oieie",2,"s00s44", "113550"),
-      new TestCase("bsad+angelina","bsangelina",3,"d33d43d53", "00363713100"),
+      new TestCase("brad+angelina","brangelina",3,"d33d43d53", "00363713100"),
       new TestCase("?e?uli?ka","e?uli?ka",1,"d00", "108980"),
       new TestCase("","",0,"", "000"),
       new TestCase("a","",1,"d00", "100"),
@@ -298,10 +297,11 @@ public class Levenshtein {
       new TestCase("abc","axc",1,"s11", "001221330"),
       new TestCase("xabxcdxxefxgx","1ab2cd34ef5g6",6,"s00s33s66s77s1010s1212", "1124428821111113130"),
       new TestCase("example","samples",3,"d00s10i76", "215770"),
-      new TestCase("stusgeon","usgently",6,"d00d10i64i65s66s77", "204880"),
-      new TestCase("levenshtein","fsankenstein",6,"i00i01s02s13s24d68", "35378411120"),
-      new TestCase("distance","diffesence",5,"i22i23s24s35s46", "0025738100"),
-      new TestCase("java was neat","scala is gseat",7,"i00s01s23d56s66i99s910", "1213427721011313140"),
+      new TestCase("sturgeon","urgently",6,"d00d10i64i65s66s77", "204880"),
+      new TestCase("levenshtein","frankenstein",6,"i00i01s02s13s24d68", "35378411120"),
+      new TestCase("distance","difference",5,"i22i23s24s35s46", "0025738100"),
+      new TestCase("java was neat","scala is great",7,"i00s01s23d56s66i99s910", "1213427721011313140"),
+      new TestCase("air force 20 2017 aboard jan obamas plan sworn trump will","air force courtesy flight inauguration newlyformer president",43,"i1010s1011s1112s1213s1314s1415s1516s1617s1819s1920s2021s2122s2223s2324i2526s2527s2729s2830s2931s3032s3234s3335s3436s3537s3638s3739s3840s3941s4042s4143s4244i4547i4548s4549s4751d4953s5053s5154s5255s5356s5457s5558s5659", "00101718124251262813133143452465014852157600"),
     };
 
 

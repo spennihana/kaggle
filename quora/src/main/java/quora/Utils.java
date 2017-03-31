@@ -6,6 +6,8 @@ import water.fvec.Chunk;
 import water.util.ArrayUtils;
 import water.util.IcedInt;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 
@@ -273,10 +275,9 @@ public class Utils {
     return res;
   }
 
-  public static double qratio(String a, String b) {
-    return 100*DiffLib.Levenshtein.ratio(a,b);
-  }
+  public static double qratio(String a, String b) {return ratio(a,b);}
 
+  // https://github.com/seatgeek/fuzzywuzzy/blob/master/fuzzywuzzy/fuzz.py#L238-L308
   public static double wratio(String a, String b) {
     boolean try_partial;
     double unbase_scale = .95;
@@ -286,15 +287,108 @@ public class Utils {
 
     try_partial = len_ratio > 1.5;
     if( len_ratio > 8 ) partial_scale = 0.6;
+
+    String[] toks1 = a.split(" ");
+    String[] toks2 = a.split(" ");
+
     if( try_partial ) {
-      double partial = 0;
+      double partial = partial_ratio(a,b) * partial_scale;
+      double ptsor   = token_sort_ratio(toks1,toks2,true) * unbase_scale * partial_scale;
+      double ptser   = token_set_ratio (toks1,toks2,true) * unbase_scale * partial_scale;
+      return maximum(partial,ptsor,ptser,base);
     }
-    return 0;
+    double tsor = token_sort_ratio(toks1,toks2,false) * unbase_scale;
+    double tser = token_set_ratio (toks1,toks2,false) * unbase_scale;
+    return maximum(base,tsor,tser);
   }
 
+  public static double maximum(double... d) {
+    return ArrayUtils.maxValue(d);
+  }
+
+  public static double ratio(String s1, String s2) {
+    return 100*DiffLib.Levenshtein.ratio(s1,s2);
+  }
+
+  // https://github.com/seatgeek/fuzzywuzzy/blob/master/fuzzywuzzy/fuzz.py#L56-L90
   public static double partial_ratio(String s1, String s2) {
-    String shorter=s1, longer=s2;
-    if( s2.length() < s1.length() ) { shorter=s2; longer=s1; }
-    return 0;
+    try {
+      String shorter,longer;
+      if (s1.length() <= s2.length()) {
+        shorter = s1;
+        longer = s2;
+      } else {
+        shorter=s2;
+        longer=s1;
+      }
+      int[][] blocks = DiffLib.Levenshtein.matching_groups(shorter, longer);
+      double maxScore = -Double.MAX_VALUE;
+      int longer_len=longer.length();
+      for (int[] block : blocks) {
+        int diff = block[1] - block[0];
+        int long_s = diff > 0 ? diff : 0;
+        int long_e = long_s + shorter.length();
+        String long_sub = longer.substring(long_s, long_e>longer_len?longer_len:long_e);
+        double r = DiffLib.Levenshtein.ratio(shorter, long_sub);
+        if (r > 0.995) return 100;
+        maxScore = Math.max(maxScore, r);
+      }
+      return 100 * maxScore;
+    } catch (Exception e) {
+      System.err.println("s1= " + s1 + "; s2=" + s2);
+      throw new RuntimeException(e);
+    }
+  }
+
+  public static double token_sort_ratio(String[] w1, String[] w2, boolean partial) {
+    Arrays.sort(w1); Arrays.sort(w2);
+    String s1 = join(w1);
+    String s2 = join(w2);
+    return partial?partial_ratio(s1,s2):ratio(s1,s2);
+  }
+
+  public static double token_set_ratio(String[] w1, String[] w2, boolean partial) {
+    HashSet<String> t1 = new HashSet<>(); Collections.addAll(t1,w1);
+    HashSet<String> t2 = new HashSet<>(); Collections.addAll(t2,w2);
+
+    HashSet<String> sect         = new HashSet<>();
+    HashSet<String> diff1to2     = new HashSet<>(); // t1 - t2
+    HashSet<String> diff2to1     = new HashSet<>(); // t2 - t1
+    for(String s: t1) if( t2.contains(s) ) sect    .add(s);
+    for(String s: t1) if( !t2.contains(s)) diff1to2.add(s);
+    for(String s: t2) if( !t1.contains(s)) diff2to1.add(s);
+
+    String sorted_sect  = sortJoin(sect);
+    String sorted_diff12= sortJoin(diff1to2);
+    String sorted_diff21= sortJoin(diff2to1);
+
+    String combined12 = (sorted_sect + " " + sorted_diff12).trim();
+    String combined21 = (sorted_sect + " " + sorted_diff21).trim();
+    sorted_sect = sorted_sect.trim();
+
+    double r = -Double.MAX_VALUE;
+    if( partial ) {
+      r = Math.max(r, partial_ratio(sorted_sect, combined12));
+      r = Math.max(r, partial_ratio(sorted_sect, combined21));
+      r = Math.max(r, partial_ratio(combined12,  combined21));
+      return r;
+    }
+
+    r = Math.max(r, ratio(sorted_sect, combined12));
+    r = Math.max(r, ratio(sorted_sect, combined21));
+    return Math.max(r, ratio(combined12,  combined21));
+  }
+
+  public static String sortJoin(HashSet<String> strs) {
+    String[] toks = strs.toArray(new String[strs.size()]);
+    Arrays.sort(toks);
+    return join(toks);
+  }
+
+
+  public static void main(String[] args) {
+    String s1 = "air force 20 2017 aboard jan obamas plan sworn trump will";
+    String s2 = "air force courtesy flight inauguration newlyformer president";
+    partial_ratio(s1,s2);
   }
 }
