@@ -70,7 +70,6 @@ public class Preprocess2 extends MRTask<Preprocess2> {
     Q1=_test?1:3;
     Q2=_test?2:4;
     _em = new WordEmbeddingsReader();
-    _em.read2("./lib/w2vec_models/gw2vec",300);
   }
 
   @Override public void setupLocal() {
@@ -86,7 +85,8 @@ public class Preprocess2 extends MRTask<Preprocess2> {
     _stopWords = new HashSet<>();
     _stopWords.addAll((Set<String>)_lex.getStopWords().getLexicon());
     System.out.println("stop words loaded");
-    _em.setupLocal();
+    _em.read2("./lib/w2vec_models/gw2vec",300);
+//    _em.setupLocal();
     System.out.println(_em._cache.size() + " vecs loaded");
 
     // init all the string distance measures one time here
