@@ -19,27 +19,52 @@ import static water.util.MathUtils.sum;
 public class FeatureCompute {
 
   public static void main(String[] args) {
-    WordEmbeddings wem = new WordEmbeddings(); // read the word embeddings in clinit on each node in cluster
+    new WordEmbeddings(); // read the word embeddings in clinit on each node in cluster
     // boot up h2o for preprocessing
     H2OApp.main(args);
-    boolean train=true;
     int id=16;
+    boolean sample=false;
+    runTrain(id,sample);
+    runTest (id,sample);
+    H2O.shutdown(0);
+  }
 
-    String outpath= train?"./data/train_feats"+id+".csv":"./data/test_feats"+id+".csv";
-    String path = train?"./data/train_clean.csv":"./data/test_clean.csv";
-    String name = train?"train":"test";
-    String key= train?"train_feats":"test_feats";
-    byte[] types= train?new byte[]{Vec.T_NUM,Vec.T_NUM,Vec.T_NUM, Vec.T_STR, Vec.T_STR, Vec.T_NUM}:new byte[]{Vec.T_NUM,Vec.T_STR,Vec.T_STR};
+  static void runTrain(int id, boolean sample) {
+    String outpath= "./data/train_feats"+id+".csv";
+    String path = sample?"./data/train_sample.csv":"./data/train_clean.csv";
+    String name = "train";
+    String key= "train_feats";
+    byte[] types= new byte[]{Vec.T_NUM,Vec.T_NUM,Vec.T_NUM, Vec.T_STR, Vec.T_STR, Vec.T_NUM};
     Frame fr = importParseFrame(path,name, types);
     long s = System.currentTimeMillis();
-    PreprocessorTask pt = new PreprocessorTask(computeFeatures(),train);
+    PreprocessorTask pt = new PreprocessorTask(computeFeatures(),true);
     String[] outnames = pt.getNames();
     Frame out = pt.doAll(outnames.length, Vec.T_NUM,fr).outputFrame(Key.make(key),outnames,null);
     System.out.println("all done: " + (System.currentTimeMillis()-s)/1000. + " seconds");
     System.out.println("Writing frame ");
     Job job = Frame.export(out, outpath, out._key.toString(), false, 1);
     job.get();
-    H2O.shutdown(0);
+    out.delete();
+    fr.delete();
+  }
+
+  static void runTest(int id,boolean sample) {
+    String outpath= "./data/test_feats"+id+".csv";
+    String path = sample?"./data/test_sample.csv":"./data/test_clean.csv";
+    String name = "test";
+    String key= "test_feats";
+    byte[] types= new byte[]{Vec.T_NUM,Vec.T_STR,Vec.T_STR};
+    Frame fr = importParseFrame(path,name, types);
+    long s = System.currentTimeMillis();
+    PreprocessorTask pt = new PreprocessorTask(computeFeatures(),false);
+    String[] outnames = pt.getNames();
+    Frame out = pt.doAll(outnames.length, Vec.T_NUM,fr).outputFrame(Key.make(key),outnames,null);
+    System.out.println("all done: " + (System.currentTimeMillis()-s)/1000. + " seconds");
+    System.out.println("Writing frame ");
+    Job job = Frame.export(out, outpath, out._key.toString(), false, 1);
+    job.get();
+    fr.delete();
+    out.delete();
   }
 
   static Feature[] computeFeatures() {

@@ -33,7 +33,7 @@ public class WordEmbeddings extends Iced {
     pcsv.parse_bytes();
     elapsed2 = System.currentTimeMillis() - start;
     System.out.println("Parsed word embeddings in " + elapsed2/1000. + " seconds");
-    if( _embeddings==null ) _embeddings = new HashMap<>();
+    _embeddings = new HashMap<>();
     start = System.currentTimeMillis();
     for(ParallelCsvRead.ParseBytesTask pbt: pcsv._pbtasks) {
       _embeddings.putAll(pbt._rows);
