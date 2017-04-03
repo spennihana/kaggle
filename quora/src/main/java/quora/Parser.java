@@ -38,11 +38,6 @@ public class Parser {
     }
   }
 
-  // read up to "off" bytes from the bytearray
-  void parseBytes(byte[] bits, int off) {
-  }
-
-
   // take the stance that CRLF or LF in quotes is not the end of the line!
   // assume that all quotes are matched, otherwise will end up at the EOF
   // with quotes

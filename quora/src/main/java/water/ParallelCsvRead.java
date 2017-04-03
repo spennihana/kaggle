@@ -33,7 +33,7 @@ public class ParallelCsvRead {
     _pbtasks = new ParseBytesTask[_rtasks.length];
     ArrayList<ParseBytesTask> pbtasks = new ArrayList<>();
     for(int i=0;i<_pbtasks.length;++i) {  //_pbtasks.length
-      _pbtasks[i] = new ParseBytesTask(_rtasks[i],i<_rtasks.length-1?_rtasks[i+1]._chk:null,300,(byte)' ');
+      _pbtasks[i] = new ParseBytesTask(_rtasks[i],i<_rtasks.length-1?_rtasks[i+1]._chk:null,i,(byte)' ');
       pbtasks.add(_pbtasks[i]);
     }
     ForkJoinTask.invokeAll(pbtasks);
@@ -78,12 +78,14 @@ public class ParallelCsvRead {
     byte[] _in;
     byte[] _nextBits; // the next byte array over (null if final chunk)
 
+    int _cidx;
     HashMap<BufferedString, double[]> _rows;
-    ParseBytesTask(ReadTask byteArray, byte[] next_bytes, int ncols, byte sep) {
+    ParseBytesTask(ReadTask byteArray, byte[] next_bytes, int cidx, byte sep) {
       _in=byteArray._chk;
       byteArray._chk=null; // free the pointer from byteArray...
       CHAR_SEP=sep;
       _nextBits=next_bytes;
+      _cidx=cidx;
     }
 
     // read a string followed by 300 doubles
@@ -91,10 +93,11 @@ public class ParallelCsvRead {
       _rows = new HashMap<>();
       int pos=0;
       byte b;
-      while( (b = _in[pos++]) != CHAR_CR && b!= CHAR_LF ); // loop up to CR or LF, and go one byte past
-      b= _in[pos];
-      if( b==CHAR_LF ) pos++; // could be that last byte read was a CR, so skip this byte
-
+      if( _cidx!=0 ) { // if not the first chk, means another thread already parsed these bits
+        while ((b = _in[pos++]) != CHAR_CR && b != CHAR_LF) ; // loop up to CR or LF, and go one byte past
+        b = _in[pos];
+        if (b == CHAR_LF) pos++; // could be that last byte read was a CR, so skip this byte
+      }
       // now the fun begins!
       while(pos < _in.length) {
         int start = pos;
@@ -182,7 +185,7 @@ public class ParallelCsvRead {
   }
 
   public static void main(String[] args) {
-    ParallelCsvRead r = new ParallelCsvRead("./lib/w2vec_models/gw2vec");
+    ParallelCsvRead r = new ParallelCsvRead("./lib/w2vec_models/gw2vec_sample");
     long s = System.currentTimeMillis();
     r.raw_parse();
     System.out.println("Raw disk read in " + (System.currentTimeMillis() - s)/1000. + " seconds");
