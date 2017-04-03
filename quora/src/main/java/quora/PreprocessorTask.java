@@ -22,18 +22,19 @@ public class PreprocessorTask extends MRTask<PreprocessorTask> {
   transient Feature[] _features;
   transient WordEmbeddings _em;
 
-  PreprocessorTask(Feature[] features, boolean test) {
+  PreprocessorTask(Feature[] features, boolean train) {
     _features=features;
-    _test=test;
+    _test=!train;
     Q1=_test?1:3;
     Q2=_test?2:4;
   }
 
   String[] getNames() {
-    String[] names = new String[_test? _features.length : _features.length+1];
-    for(int i=0;i<_features.length;++i) names[i] = _features[i]._name;
-    if( _test ) return names;
-    names[names.length-1] = "is_duplicate";
+    String[] names = new String[_features.length+1];
+    int i=0;
+    if( _test ) names[i++] = "id";
+    else        names[_features.length] = "is_duplicate";
+    for(;i<_features.length;++i) names[i] = _features[i]._name;
     return names;
   }
 
@@ -58,6 +59,7 @@ public class PreprocessorTask extends MRTask<PreprocessorTask> {
       String[] w1=null,w2=null,fw1=null,fw2=null;
       try {
         int ncs_idx=0;
+        if( _test ) ncs[ncs_idx++].addNum(cs[0].at8(r));
 
         s1 = cs[Q1].isNA(r)?"":cs[Q1].atStr(bstr, r).toString();
         s2 = cs[Q2].isNA(r)?"":cs[Q2].atStr(bstr, r).toString();

@@ -40,7 +40,7 @@ print "creating test/train split"
 xtrain, xtest, ytrain, ytest = train_test_split(train[xlab], train['is_duplicate'], test_size=0.2, random_state=0)
 
 clf = xgb.XGBClassifier(
-learning_rate =0.01,
+learning_rate =0.02,
 n_estimators=1000,
 max_depth=4,
 min_child_weight=1,
