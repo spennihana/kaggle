@@ -6,6 +6,8 @@ import water.nbhm.NonBlockingHashMap;
 import water.parser.BufferedString;
 import water.util.Log;
 
+import java.util.Arrays;
+
 public class WordEmbeddings {
 
   private ParallelCsvRead.ParseBytesTask[] _pbTasks;
@@ -36,5 +38,10 @@ public class WordEmbeddings {
 
   public double[] get(String w) {
     return _embeddings.get(new BufferedString(w));
+  }
+
+  public static void main(String[] args){
+    WordEmbeddings wem = WordEmbeddings.read("./lib/w2vec_models/gw2vec");
+    System.out.println(Arrays.toString(wem.get("helo")));
   }
 }
