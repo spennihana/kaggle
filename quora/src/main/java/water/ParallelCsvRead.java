@@ -104,7 +104,7 @@ public class ParallelCsvRead {
           // read _nextBits until newline into a special byte[] here
           int npos=0;
           while( (b=_nextBits[npos++])!=CHAR_CR && b!=CHAR_LF );
-          b= _in[npos];
+          b= _nextBits[npos];
           if( b==CHAR_LF ) npos++;
           byte[] boundaryLine = new byte[(pos-start) + npos];
           System.arraycopy(_in,start,boundaryLine,0,pos-start);
