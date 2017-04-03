@@ -2,16 +2,14 @@ package quora;
 
 
 import water.ParallelCsvRead;
-import water.nbhm.NonBlockingHashMap;
 import water.parser.BufferedString;
-import water.util.Log;
 
 import java.util.Arrays;
 import java.util.HashMap;
 
 public class WordEmbeddings {
 
-  transient HashMap<BufferedString, double[]> _embeddings;
+  public transient HashMap<BufferedString, double[]> _embeddings;
 
   public static WordEmbeddings read(String path) {
     WordEmbeddings em = new WordEmbeddings();
