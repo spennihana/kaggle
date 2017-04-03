@@ -14,12 +14,12 @@ import java.util.concurrent.RecursiveAction;
 
 public class ParallelCsvRead {
 
-  ReadTask[] _rtasks;
-  ParseBytesTask[] _pbtasks;
+  public ReadTask[] _rtasks;
+  public ParseBytesTask[] _pbtasks;
   int _nchks;
   long _nbytes;
   String _path;
-  ParallelCsvRead(String path) {
+  public ParallelCsvRead(String path) {
     File f = new File(path);
     long nbytes = f.length();
     int nchks = (int)Math.ceil((double)nbytes/(double)ReadTask.CHK_SIZE);
@@ -30,7 +30,7 @@ public class ParallelCsvRead {
   }
 
   // do something with the byte arrays
-  void parse_bytes() {
+  public void parse_bytes() {
     _pbtasks = new ParseBytesTask[_rtasks.length];
     ArrayList<ParseBytesTask> pbtasks = new ArrayList<>();
     for(int i=0;i<_pbtasks.length;++i) {  //_pbtasks.length
@@ -40,7 +40,7 @@ public class ParallelCsvRead {
     ForkJoinTask.invokeAll(pbtasks);
   }
 
-  void raw_parse() {
+  public void raw_parse() {
     ArrayList<ReadTask> rtasks = new ArrayList<>();
     for(int i=0;i<_rtasks.length;++i) {
       _rtasks[i] = new ReadTask(i,_path, (long)i * (long)ReadTask.CHK_SIZE, i == _rtasks.length - 1 ? (int) (_nbytes - ReadTask.CHK_SIZE * (_nchks - 1)) : ReadTask.CHK_SIZE);
@@ -49,7 +49,7 @@ public class ParallelCsvRead {
     ForkJoinTask.invokeAll(rtasks);
   }
 
-  static class ParseBytesTask extends RecursiveAction {
+  public static class ParseBytesTask extends RecursiveAction {
 
     private static final int[] c2i = new int[128];
     static {
@@ -65,22 +65,19 @@ public class ParallelCsvRead {
       c2i['9']=9;
     }
 
-
-    static final byte CHAR_TAB = '\t';
     static final byte CHAR_CR = 13;  // \r
     static final byte CHAR_LF = 10;  // \n
+    static final byte CHAR_DASH = '-';
     static final byte CHAR_SPACE = ' ';
-    static final byte CHAR_DOUBLE_QUOTE = '"';
-    static final byte CHAR_SINGLE_QUOTE = '\'';
-
-    protected final byte CHAR_DECIMAL_SEP = '.';
+    static final byte CHAR_DOT = '.';
+    static final byte CHAR_ZERO = '0';
     protected final byte CHAR_SEP;
 
     byte[] _in;
     byte[] _nextBits; // the next byte array over (null if final chunk)
 
     int _cidx;
-    HashMap<BufferedString, double[]> _rows;
+    public HashMap<BufferedString, double[]> _rows;
     ParseBytesTask(ReadTask byteArray, byte[] next_bytes, int cidx, byte sep) {
       _in=byteArray._chk;
       byteArray._chk=null; // free the pointer from byteArray...
@@ -131,7 +128,7 @@ public class ParallelCsvRead {
       int x;
       while( --i>=start ) { // skip the white space by decrementing i
         x=i;
-        while( i>= start && bits[i]!=' ' ) i--;
+        while( i>= start && bits[i]!=CHAR_SPACE ) i--;
         int fidx=0;
         if( em_idx>=0 ) {
           double d=0;
@@ -139,13 +136,13 @@ public class ParallelCsvRead {
           double di=10; // divide by powers of 10 according to digit index
           boolean pos=true; // positve or negative
           int ii=i+1;
-          if( bits[ii]=='-' ) {
+          if( bits[ii]==CHAR_DASH ) {
             pos=false;
             ii++;
           }
-          assert bits[ii]=='0' : new String(Arrays.copyOfRange(bits,i+1,x)) + "; full bits: " + new String(Arrays.copyOfRange(bits,start,end-1));
+          assert bits[ii]==CHAR_ZERO : new String(Arrays.copyOfRange(bits,i+1,x)) + "; full bits: " + new String(Arrays.copyOfRange(bits,start,end-1));
           ii++;
-          assert bits[ii]=='.' : new String(Arrays.copyOfRange(bits,i+1,x)) + "; full bits: " + new String(Arrays.copyOfRange(bits,start,end-1));
+          assert bits[ii]==CHAR_DOT : new String(Arrays.copyOfRange(bits,i+1,x)) + "; full bits: " + new String(Arrays.copyOfRange(bits,start,end-1));
           ii++;
           for(;ii<=x;++ii) {
             d += c2i[bits[ii]] / di;
