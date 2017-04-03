@@ -20,18 +20,21 @@ public class FeatureCompute {
 
 
   public static void main(String[] args) {
+    String word2vecPath ="./lib/w2vec_models/gw2vec";
+    WordEmbeddings wem = new WordEmbeddings(); // read the word embeddings in clinit on each node in cluster
     // boot up h2o for preprocessing
     H2OApp.main(args);
-    boolean train=true;
-    int id=15;
+    boolean train=false;
+    int id=13;
+
     String outpath= train?"./data/train_feats"+id+".csv":"./data/test_feats"+id+".csv";
-    String path = train?"./data/train_sample.csv":"./data/test_clean.csv";
+    String path = train?"./data/train_clean.csv":"./data/test_clean.csv";
     String name = train?"train":"test";
     String key= train?"train_feats":"test_feats";
     byte[] types= train?new byte[]{Vec.T_NUM,Vec.T_NUM,Vec.T_NUM, Vec.T_STR, Vec.T_STR, Vec.T_NUM}:new byte[]{Vec.T_NUM,Vec.T_STR,Vec.T_STR};
     Frame fr = importParseFrame(path,name, types);
     long s = System.currentTimeMillis();
-    PreprocessorTask pt = new PreprocessorTask(computeFeatures(),"./lib/w2vec_models/gw2vec_sample",false);
+    PreprocessorTask pt = new PreprocessorTask(computeFeatures(),false);
     String[] outnames = pt.getNames();
     Frame out = pt.doAll(outnames.length, Vec.T_NUM,fr).outputFrame(Key.make(key),outnames,null);
     System.out.println("all done: " + (System.currentTimeMillis()-s)/1000. + " seconds");

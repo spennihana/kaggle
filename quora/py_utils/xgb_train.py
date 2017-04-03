@@ -6,12 +6,12 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import StratifiedShuffleSplit
 
-training = pd.read_csv("../data/train_feats3.csv")
+training = pd.read_csv("../data/train_feats13.csv")
 print "loaded training frame"
 
 pos_train = training[training['is_duplicate']==1]
 neg_train = training[training['is_duplicate']==0]
-p=0.165
+p=0.175
 scale = ((1.*len(pos_train) / (1.*len(pos_train) + 1.*len(neg_train))) / (1.*p)) - 1.
 while scale > 1:
     neg_train = pd.concat([neg_train, neg_train])

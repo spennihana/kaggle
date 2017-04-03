@@ -19,17 +19,14 @@ public class PreprocessorTask extends MRTask<PreprocessorTask> {
   private final int Q1;
   private final int Q2;
   private final boolean _test;
-  final String _w2vecPath;
-
   transient Feature[] _features;
   transient WordEmbeddings _em;
 
-  PreprocessorTask(Feature[] features, String w2vecPath, boolean test) {
+  PreprocessorTask(Feature[] features, boolean test) {
     _features=features;
     _test=test;
     Q1=_test?1:3;
     Q2=_test?2:4;
-    _w2vecPath=w2vecPath;
   }
 
   String[] getNames() {
@@ -41,7 +38,7 @@ public class PreprocessorTask extends MRTask<PreprocessorTask> {
   }
 
   @Override public void setupLocal() {
-    _em = new WordEmbeddings(_w2vecPath).read();
+    _em = WordEmbeddings._em;
     if( _features==null ) {
       _features = FeatureCompute.computeFeatures();
     }
