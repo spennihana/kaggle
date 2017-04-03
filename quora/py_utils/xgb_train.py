@@ -13,9 +13,9 @@ pos_train = training[training['is_duplicate']==1]
 neg_train = training[training['is_duplicate']==0]
 p=0.175
 scale = ((1.*len(pos_train) / (1.*len(pos_train) + 1.*len(neg_train))) / (1.*p)) - 1.
-while scale > 1:
-    neg_train = pd.concat([neg_train, neg_train])
-    scale -=1
+#while scale > 1:
+neg_train = pd.concat([neg_train, neg_train])
+#scale -=1
 neg_train = pd.concat([neg_train, neg_train[:int(scale * len(neg_train))]])
 train = pd.concat([pos_train, neg_train])
 
@@ -41,15 +41,15 @@ xtrain, xtest, ytrain, ytest = train_test_split(train[xlab], train['is_duplicate
 
 clf = xgb.XGBClassifier(
 learning_rate =0.02,
-n_estimators=1000,
-max_depth=4,
+n_estimators=500,
+max_depth=9,
 min_child_weight=1,
-gamma=0.1,
+#gamma=0.1,
 subsample=.7,
 colsample_bytree=0.7,
-objective= "binary:logistic",
-scale_pos_weight=1,
-reg_alpha=0.01
+objective= "binary:logistic"
+#scale_pos_weight=1,
+#reg_alpha=0.01
 )
 
 evalset = [(xtrain.as_matrix(), ytrain.as_matrix()),(xtest.as_matrix(),ytest.as_matrix())]

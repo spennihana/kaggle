@@ -33,8 +33,18 @@ public class ParallelCsvRead {
   public void parse_bytes() {
     _pbtasks = new ParseBytesTask[_rtasks.length];
     ArrayList<ParseBytesTask> pbtasks = new ArrayList<>();
-    for(int i=0;i<_pbtasks.length;++i) {  //_pbtasks.length
+    for(int i=0;i<_pbtasks.length;++i) {
       _pbtasks[i] = new ParseBytesTask(_rtasks[i],i<_rtasks.length-1?_rtasks[i+1]._chk:null,i,(byte)' ');
+      pbtasks.add(_pbtasks[i]);
+    }
+    ForkJoinTask.invokeAll(pbtasks);
+  }
+
+  public void parse_glove() {
+    _pbtasks = new GloveBytesTask[_rtasks.length];
+    ArrayList<ParseBytesTask> pbtasks = new ArrayList<>();
+    for(int i=0;i<_pbtasks.length;++i) {
+      _pbtasks[i] = new GloveBytesTask(_rtasks[i],i<_rtasks.length-1?_rtasks[i+1]._chk:null,i,(byte)' ');
       pbtasks.add(_pbtasks[i]);
     }
     ForkJoinTask.invokeAll(pbtasks);
@@ -51,7 +61,7 @@ public class ParallelCsvRead {
 
   public static class ParseBytesTask extends RecursiveAction {
 
-    private static final int[] c2i = new int[128];
+    protected static final int[] c2i = new int[128];
     static {
       c2i['0']=0;
       c2i['1']=1;
@@ -163,6 +173,68 @@ public class ParallelCsvRead {
     }
   }
 
+  public static class GloveBytesTask extends ParseBytesTask {
+    GloveBytesTask(ReadTask byteArray, byte[] next_bytes, int cidx, byte sep) {
+      super(byteArray, next_bytes, cidx, sep);
+    }
+
+    @Override protected void compute() {super.compute();}
+    @Override void captureLine(int start, int end, byte[] bits) {
+      int em_idx=299;
+      double[] em = new double[300];
+      int i=end;
+      i--; // skip the LF
+      if( bits[i]=='\b') i--; // skip a \b
+      if( bits[i]=='\b') i--; // skip another \b
+      int x;
+      while( i>=start ) { // skip the white space by decrementing i
+        x=i;
+        boolean sci=false;
+        while( i>= start && bits[i]!=CHAR_SPACE ) {
+          sci |= bits[i]=='e';
+          i--;
+        }
+        int fidx=0;
+        if( em_idx>=0 ) {
+          if (sci) {
+            em[em_idx--] = Double.parseDouble(new String(Arrays.copyOfRange(bits,i+1,x+1)));
+          } else {
+            double d = 0;
+            // parse each byte into a digit...
+            double di = 10; // divide by powers of 10 according to digit index
+            boolean pos = true; // positve or negative
+            int ii = i + 1;
+            if (bits[ii] == CHAR_DASH) {
+              pos = false;
+              ii++;
+            }
+            d = c2i[bits[ii]];
+            ii++;
+            if (ii < x) {
+              assert bits[ii] == CHAR_DOT : new String(Arrays.copyOfRange(bits, i + 1, x)) + "; em_idx=" + em_idx + ";  full bits: " + new String(Arrays.copyOfRange(bits, start, end - 1));
+              ii++;
+              for (; ii <= x; ++ii) {
+                d += c2i[bits[ii]] / di;
+                di *= 10.;
+              }
+            }
+            if (!pos) d = -d;
+            em[em_idx--] = d;
+          }
+        } else {
+          byte[] field = new  byte[x-i];
+          for (int ii = i + 1; ii <= x; ++ii)
+            field[fidx++] = bits[ii];
+          _rows.put(new BufferedString(field,0,field.length),em);
+          break;
+        }
+        i--;
+      }
+      assert em_idx <= 0;
+      assert i < start;
+    }
+  }
+
   static class ReadTask extends RecursiveAction {
     int _cidx;
     byte[] _chk;
@@ -185,12 +257,12 @@ public class ParallelCsvRead {
   }
 
   public static void main(String[] args) {
-    ParallelCsvRead r = new ParallelCsvRead("./lib/w2vec_models/gw2vec");
+    ParallelCsvRead r = new ParallelCsvRead("./lib/w2vec_models/glove.840B.300d.txt");
     long s = System.currentTimeMillis();
     r.raw_parse();
     System.out.println("Raw disk read in " + (System.currentTimeMillis() - s)/1000. + " seconds");
     s=System.currentTimeMillis();
-    r.parse_bytes();
+    r.parse_glove();
     System.out.println("Parse bytes in " + (System.currentTimeMillis() - s)/1000. + " seconds");
     int nrows=0;
     for(int i=0;i<r._pbtasks.length;++i) {
