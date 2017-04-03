@@ -20,14 +20,27 @@ public class PreprocessorTask extends MRTask<PreprocessorTask> {
   private final int Q1;
   private final int Q2;
   private final boolean _test;
+  final String _w2vecPath;
 
-  PreprocessorTask(Feature[] features, boolean test) {
+  transient WordEmbeddings _em;
+
+  PreprocessorTask(Feature[] features, String w2vecPath, boolean test) {
     _features=features;
     _test=test;
     Q1=_test?1:3;
     Q2=_test?2:4;
+    _w2vecPath=w2vecPath;
   }
 
+  String[] getNames() {
+    String[] names = new String[_test? _features.length : _features.length+1];
+    for(int i=0;i<_features.length;++i) names[i] = _features[i]._name;
+    if( _test ) return names;
+    names[names.length-1] = "is_duplicate";
+    return names;
+  }
+
+  @Override public void setupLocal() { _em = new WordEmbeddings(_w2vecPath).read(); }
   @Override public void map(Chunk[] cs, NewChunk[] ncs) {
     // some re-usables
     BufferedString bstr = new BufferedString();
@@ -62,10 +75,11 @@ public class PreprocessorTask extends MRTask<PreprocessorTask> {
         f2 = Utils.join(fw2);
 
         for (Feature f : _features) {
-          ncs[ncs_idx++].addNum(f._op.op(s1, s2, w1, w2, we_s1, we_ss1, f1, f2, fw1, fw2, we_s2, we_ss2, fc));
-//          ncs[ncs_idx++].addNum(f._weop.weop(w1,w2,fw1,fw2));
+          if( f._weop==null )
+            ncs[ncs_idx++].addNum(f._op.op(s1, s2, w1, w2, f1, f2, fw1, fw2, fc));
+          else
+            ncs[ncs_idx++].addNum(f._weop.weop(w1,w2,fw1,fw2,we_s1,we_ss1,we_s2,we_ss2,_em));
         }
-
       } catch( Exception e) {
         System.out.println("q1= " + s1);
         System.out.println("q2= " + s2);
@@ -97,17 +111,17 @@ public class PreprocessorTask extends MRTask<PreprocessorTask> {
     public feature_op _op;
     public we_op _weop;
     public Feature(String name, feature_op op) { _name=name; _op=op; _weop=null; }
-    public Feature(String name, we_op weop)    { _name=name; _op=null; _weop=weop; }
+    public Feature(String name, float f, we_op weop)    { _name=name; _op=null; _weop=weop; }
     /**
      * lambda for computing different features
      */
     interface feature_op {
-      double op(String s1, String s2, String[] w1, String[] w2, double[] ws1, double[] wss1,
-                String f1, String f2, String[] fw1, String[] fw2, double[] ws2, double[] wss2, FuzzyCmp fc);
+      double op(String s1, String s2, String[] w1, String[] w2, String f1, String f2, String[] fw1, String[] fw2,FuzzyCmp fc);
     }
 
     interface we_op {
-      double weop(String[] w1, String[] w2, String[] fw1, String[] fw2, WordEmbeddingsReader em);
+      double weop(String[] w1, String[] w2, String[] fw1, String[] fw2, double[] ws1, double[] wss1,
+                  double[] ws2, double[] wss2, WordEmbeddings em);
     }
   }
 }

@@ -1,19 +1,21 @@
 package quora;
 
 
+import water.Iced;
 import water.ParallelCsvRead;
 import water.parser.BufferedString;
 
 import java.util.Arrays;
 import java.util.HashMap;
 
-public class WordEmbeddings {
+public class WordEmbeddings extends Iced {
 
   public transient HashMap<BufferedString, double[]> _embeddings;
+  final String _path;
 
-  public static WordEmbeddings read(String path) {
-    WordEmbeddings em = new WordEmbeddings();
-    ParallelCsvRead pcsv = new ParallelCsvRead(path);
+  WordEmbeddings(String path) { _path=path; }
+  public  WordEmbeddings read() {
+    ParallelCsvRead pcsv = new ParallelCsvRead(_path);
     long start = System.currentTimeMillis();
     long elapsed;
     long elapsed2;
@@ -25,16 +27,16 @@ public class WordEmbeddings {
     pcsv.parse_bytes();
     elapsed2 = System.currentTimeMillis() - start;
     System.out.println("Parsed word embeddings in " + elapsed2/1000. + " seconds");
-    em._embeddings = new HashMap<>();
+    _embeddings = new HashMap<>();
     start = System.currentTimeMillis();
     for(ParallelCsvRead.ParseBytesTask pbt: pcsv._pbtasks) {
-      em._embeddings.putAll(pbt._rows);
+      _embeddings.putAll(pbt._rows);
       pbt._rows=null;
     }
     elapsed3 = System.currentTimeMillis() - start;
     System.out.println("Reducing word embeddings together in " + elapsed3/1000. + " seconds");
     System.out.println("Total embeddings parse time: " + (elapsed + elapsed2 + elapsed3)/1000. +  " seconds");
-    return em;
+    return this;
   }
 
   public double[] get(String w) {
@@ -42,7 +44,7 @@ public class WordEmbeddings {
   }
 
   public static void main(String[] args){
-    WordEmbeddings wem = WordEmbeddings.read("./lib/w2vec_models/gw2vec_sample");
+    WordEmbeddings wem = new WordEmbeddings("./lib/w2vec_models/gw2vec_sample").read();
     System.out.println(Arrays.toString(wem.get("hello")));
   }
 }

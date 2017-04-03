@@ -240,12 +240,12 @@ public class Utils {
     return totalDistance;
   }
 
-  public static double wmd(String[] w1, String[] w2, WordEmbeddingsReader em) {
+  public static double wmd(String[] w1, String[] w2, WordEmbeddings em) {
 
     HashMap<String, double[]> embeddings = new HashMap<>();
     int len_t1=0, len_t2=0;
     for(String w: w1) {
-      double[] d = em._cache.get(w);
+      double[] d = em.get(w);
       if( d==null ) continue;
       embeddings.put(w,d);
       len_t1++;
@@ -253,7 +253,7 @@ public class Utils {
     for(String w: w2) {
       if( embeddings.get(w)!=null ) len_t2++;
       else {
-        double[] d = em._cache.get(w);
+        double[] d = em.get(w);
         if( d==null ) continue;
         embeddings.put(w,d);
         len_t2++;
@@ -440,6 +440,53 @@ public class Utils {
     int c=0;
     for( String ff: f) c += ff.length();
     return c;
+  }
+
+  public static void fillEmVecs(String[] words, WordEmbeddings em, double[] ws, double[] wss) {
+    for(int i=0;i<ws.length;++i) ws[i]=wss[i]=0;
+    for(String s: words ) {
+      double[] f = em.get(s);
+      if( f==null ) continue;
+      add(ws, f);
+      addSq(wss, f);
+    }
+    norm(ws);
+    norm(sqrt(wss));
+  }
+
+  static void norm(double[] a) {
+    float ss=0;
+    for (double aa : a) ss += aa * aa;
+    for(int i=0;i<a.length;++i)
+      a[i]=ss==0?0f:a[i]/(double)Math.sqrt(ss);
+  }
+
+  static double[] sqrt(double[] a) {
+    for(int i=0;i<a.length;++i) a[i] = Math.sqrt(a[i]);
+    return a;
+  }
+
+  static void add(double[] a, double[] f) {
+    if( f==null ) return;
+    for(int i=0;i<f.length;++i) a[i] += f[i];
+  }
+
+  static void addSq(double[] a, double[] f) {
+    if( f==null ) return;
+    for(int i=0;i<f.length;++i) a[i] += f[i]*f[i];
+  }
+
+  static double cosine_distance(double[] a, double[] b) {
+    double sum_ab = 0;
+    double sum_a2 = 0;
+    double sum_b2 = 0;
+    for(int i=0;i<a.length;++i) {
+      sum_ab += a[i]*b[i];
+      sum_a2 += a[i]*a[i];
+      sum_b2 += b[i]*b[i];
+    }
+    double sim = sum_ab / (Math.sqrt(sum_a2) * Math.sqrt(sum_b2) );
+    return 1-sim;
   }
 
   public static double cosine(String s1, String s2) {return _cos.distance(s1,s2);}

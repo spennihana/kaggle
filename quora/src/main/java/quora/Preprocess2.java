@@ -194,28 +194,6 @@ public class Preprocess2 extends MRTask<Preprocess2> {
 //    norm(sqrt(wss));
 //  }
 
-  static void norm(float[] a) {
-    float ss=0;
-    for (float aa : a) ss += aa * aa;
-    for(int i=0;i<a.length;++i)
-      a[i]=ss==0?0f:a[i]/(float)Math.sqrt(ss);
-  }
-
-  static float[] sqrt(float[] a) {
-    for(int i=0;i<a.length;++i) a[i] = (float)Math.sqrt(a[i]);
-    return a;
-  }
-
-  static void add(float[] a, double[] f) {
-    if( f==null ) return;
-    for(int i=0;i<f.length;++i) a[i] += (float)f[i];
-  }
-
-  static void addSq(float[] a, double[] f) {
-    if( f==null ) return;
-    for(int i=0;i<f.length;++i) a[i] += (float)f[i]*f[i];
-  }
-
   double[] getDistances(String s1, String s2, double[] dists) {
     dists[0 /*cosine*/]      = _simMetrics[0].distance(s1,s2);
     dists[1 /*dameru*/]      = _simMetrics[1].distance(s1,s2);
