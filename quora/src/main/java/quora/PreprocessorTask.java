@@ -85,6 +85,7 @@ public class PreprocessorTask extends MRTask<PreprocessorTask> {
           else
             ncs[ncs_idx++].addNum(f._weop.weop(w1,w2,fw1,fw2,we_s1,we_ss1,we_s2,we_ss2,_em));
         }
+        if (!_test) ncs[ncs_idx].addNum(cs[cs.length - 1].at8(r));
       } catch( Exception e) {
         System.out.println("q1= " + s1);
         System.out.println("q2= " + s2);
