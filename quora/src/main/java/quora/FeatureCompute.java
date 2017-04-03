@@ -22,7 +22,6 @@ public class FeatureCompute {
   public static void main(String[] args) {
     // boot up h2o for preprocessing
     H2OApp.main(args);
-
     boolean train=true;
     int id=15;
     String outpath= train?"./data/train_feats"+id+".csv":"./data/test_feats"+id+".csv";
@@ -30,12 +29,20 @@ public class FeatureCompute {
     String name = train?"train":"test";
     String key= train?"train_feats":"test_feats";
     byte[] types= train?new byte[]{Vec.T_NUM,Vec.T_NUM,Vec.T_NUM, Vec.T_STR, Vec.T_STR, Vec.T_NUM}:new byte[]{Vec.T_NUM,Vec.T_STR,Vec.T_STR};
-
     Frame fr = importParseFrame(path,name, types);
-
     long s = System.currentTimeMillis();
-    Feature[] features = new Feature[] {
+    PreprocessorTask pt = new PreprocessorTask(computeFeatures(),"./lib/w2vec_models/gw2vec_sample",false);
+    String[] outnames = pt.getNames();
+    Frame out = pt.doAll(outnames.length, Vec.T_NUM,fr).outputFrame(Key.make(key),outnames,null);
+    System.out.println("all done: " + (System.currentTimeMillis()-s)/1000. + " seconds");
+    System.out.println("Writing frame ");
+    Job job = Frame.export(out, outpath, out._key.toString(), false, 1);
+    job.get();
+    H2O.shutdown(0);
+  }
 
+  static Feature[] computeFeatures() {
+    return new Feature[] {
       // "normal" features
       new Feature("common_words", ((s1, s2, w1, w2, f1, f2, fw1, fw2, fc) -> countCommon(w1,w2))),
       new Feature("common_ratio", ((s1, s2, w1, w2, f1, f2, fw1, fw2, fc) -> countCommonRatio(w1,w2))),
@@ -135,16 +142,5 @@ public class FeatureCompute {
       new Feature("canberra2", -1, ((w1, w2, fw1, fw2, ws1, wss1, ws2, wss2, em) -> canberra_distance(wss1,wss2))),
       new Feature("wmd2", -1, ((w1, w2, fw1, fw2, ws1, wss1, ws2, wss2, em) -> wmd(fw1,fw2,em))),
     };
-
-    PreprocessorTask pt = new PreprocessorTask(features,"./lib/w2vec_models/gw2vec_sample",false);
-    String[] outnames = pt.getNames();
-    Frame out = pt.doAll(outnames.length, Vec.T_NUM,fr).outputFrame(Key.make(key),outnames,null);
-    System.out.println("all done: " + (System.currentTimeMillis()-s)/1000. + " seconds");
-    System.out.println("Writing frame ");
-    Job job = Frame.export(out, outpath, out._key.toString(), false, 1);
-    job.get();
-
-    H2O.shutdown(0);
-
   }
 }

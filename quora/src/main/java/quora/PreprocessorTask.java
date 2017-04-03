@@ -2,7 +2,6 @@ package quora;
 
 
 import DiffLib.FuzzyCmp;
-import water.Freezable;
 import water.Iced;
 import water.MRTask;
 import water.fvec.Chunk;
@@ -17,12 +16,12 @@ import static quora.Utils.STOP_WORDS;
 
 public class PreprocessorTask extends MRTask<PreprocessorTask> {
 
-  Feature[] _features;
   private final int Q1;
   private final int Q2;
   private final boolean _test;
   final String _w2vecPath;
 
+  transient Feature[] _features;
   transient WordEmbeddings _em;
 
   PreprocessorTask(Feature[] features, String w2vecPath, boolean test) {
@@ -41,7 +40,12 @@ public class PreprocessorTask extends MRTask<PreprocessorTask> {
     return names;
   }
 
-  @Override public void setupLocal() { _em = new WordEmbeddings(_w2vecPath).read(); }
+  @Override public void setupLocal() {
+    _em = new WordEmbeddings(_w2vecPath).read();
+    if( _features==null ) {
+      _features = FeatureCompute.computeFeatures();
+    }
+  }
   @Override public void map(Chunk[] cs, NewChunk[] ncs) {
     // some re-usables
     BufferedString bstr = new BufferedString();
@@ -112,15 +116,15 @@ public class PreprocessorTask extends MRTask<PreprocessorTask> {
     public feature_op _op;
     public we_op _weop;
     public Feature(String name, feature_op op) { _name=name; _op=op; _weop=null; }
-    public Feature(String name, float f, we_op weop)    { _name=name; _op=null; _weop=weop; }
+    public Feature(String name, float f, we_op weop) { _name=name; _op=null; _weop=weop; }
     /**
      * lambda for computing different features
      */
-    interface feature_op extends Freezable {
+    interface feature_op {
       double op(String s1, String s2, String[] w1, String[] w2, String f1, String f2, String[] fw1, String[] fw2,FuzzyCmp fc);
     }
 
-    interface we_op extends Freezable {
+    interface we_op {
       double weop(String[] w1, String[] w2, String[] fw1, String[] fw2, double[] ws1, double[] wss1,
                   double[] ws2, double[] wss2, WordEmbeddings em);
     }
