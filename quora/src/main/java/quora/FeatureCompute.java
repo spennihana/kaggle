@@ -22,8 +22,8 @@ public class FeatureCompute {
     WordEmbeddings wem = new WordEmbeddings(); // read the word embeddings in clinit on each node in cluster
     // boot up h2o for preprocessing
     H2OApp.main(args);
-    boolean train=false;
-    int id=14;
+    boolean train=true;
+    int id=16;
 
     String outpath= train?"./data/train_feats"+id+".csv":"./data/test_feats"+id+".csv";
     String path = train?"./data/train_clean.csv":"./data/test_clean.csv";

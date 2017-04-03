@@ -31,10 +31,14 @@ public class PreprocessorTask extends MRTask<PreprocessorTask> {
 
   String[] getNames() {
     String[] names = new String[_features.length+1];
-    int i=0;
-    if( _test ) names[i++] = "id";
-    else        names[_features.length] = "is_duplicate";
-    for(;i<_features.length;++i) names[i] = _features[i]._name;
+    if( _test ) {
+      names[0]="id";
+      int nidx=1;
+      for(int i=0;i<_features.length;++i) names[nidx++] = _features[i]._name;
+      return names;
+    }
+    names[_features.length] = "is_duplicate";
+    for(int i=0;i<_features.length;++i) names[i] = _features[i]._name;
     return names;
   }
 
