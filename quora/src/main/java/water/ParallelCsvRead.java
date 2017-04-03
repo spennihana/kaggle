@@ -148,7 +148,7 @@ public class ParallelCsvRead {
             d += c2i[bits[ii]] / di;
             di *= 10.;
           }
-          if( pos ) d*=-1;
+          if( !pos ) d=-d;
           em[em_idx--]=d;
         } else {
           byte[] field = new  byte[x-i];

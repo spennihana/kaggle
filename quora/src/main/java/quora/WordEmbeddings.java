@@ -42,7 +42,7 @@ public class WordEmbeddings {
   }
 
   public static void main(String[] args){
-    WordEmbeddings wem = WordEmbeddings.read("./lib/w2vec_models/gw2vec");
+    WordEmbeddings wem = WordEmbeddings.read("./lib/w2vec_models/gw2vec_sample");
     System.out.println(Arrays.toString(wem.get("hello")));
   }
 }
