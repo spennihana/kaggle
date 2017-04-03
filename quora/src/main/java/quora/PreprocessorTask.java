@@ -2,6 +2,7 @@ package quora;
 
 
 import DiffLib.FuzzyCmp;
+import water.Freezable;
 import water.Iced;
 import water.MRTask;
 import water.fvec.Chunk;
@@ -115,11 +116,11 @@ public class PreprocessorTask extends MRTask<PreprocessorTask> {
     /**
      * lambda for computing different features
      */
-    interface feature_op {
+    interface feature_op extends Freezable {
       double op(String s1, String s2, String[] w1, String[] w2, String f1, String f2, String[] fw1, String[] fw2,FuzzyCmp fc);
     }
 
-    interface we_op {
+    interface we_op extends Freezable {
       double weop(String[] w1, String[] w2, String[] fw1, String[] fw2, double[] ws1, double[] wss1,
                   double[] ws2, double[] wss2, WordEmbeddings em);
     }
