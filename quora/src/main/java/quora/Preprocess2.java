@@ -24,8 +24,6 @@ public class Preprocess2 extends MRTask<Preprocess2> {
   private final int Q2;
   private final boolean _test;
 
-  transient HashSet<String> _stopWords;
-
   transient StringDistance[] _simMetrics;
 //  private WordEmbeddingsReader _em;
 
@@ -57,8 +55,6 @@ public class Preprocess2 extends MRTask<Preprocess2> {
   }
 
   @Override public void setupLocal() {
-    _stopWords = new HashSet<>();
-    Collections.addAll(_stopWords, STOP_WORDS);
 //    _em.read2("./lib/w2vec_models/gw2vec",300);
 //    System.out.println(_em._cache.size() + " vecs loaded");
 
@@ -134,8 +130,8 @@ public class Preprocess2 extends MRTask<Preprocess2> {
 
         // now remove stop words and tolower
         // remove stop words
-        f1 = toStringA(w1,_stopWords);
-        f2 = toStringA(w2,_stopWords);
+        f1 = toStringA(w1,STOP_WORDS);
+        f2 = toStringA(w2,STOP_WORDS);
         sf1 = Utils.join(f1);
         sf2 = Utils.join(f2);
 

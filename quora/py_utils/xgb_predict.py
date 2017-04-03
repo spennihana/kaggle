@@ -2,7 +2,7 @@ import pickle
 import xgboost as xgb
 import pandas as pd
 
-testing = pd.read_csv("../data/test_embed2.csv")
+testing = pd.read_csv("../data/test_feats3.csv")
 print "testing data read in"
 
 next_sub = 0

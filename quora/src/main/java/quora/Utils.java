@@ -1,5 +1,6 @@
 package quora;
 
+import info.debatty.java.stringsimilarity.*;
 import org.apache.commons.math3.util.FastMath;
 import water.MRTask;
 import water.fvec.Chunk;
@@ -13,28 +14,8 @@ import java.util.HashSet;
 
 public class Utils {
 
-  // get the class distributions
-  static class Sum extends MRTask<Sum> {
-    long _sum0;
-    long _sum1;
-    @Override public void map(Chunk[] cs) {
-      long sum0=0;
-      long sum1=0;
-      for(int r=0;r<cs[0]._len;++r) {
-        long v = cs[3].at8(r);
-        if( v!=0 && v!=1 ) {
-          System.out.println();
-        }
-        if( v==0 ) sum0++;
-        else sum1++;
-      }
-      _sum0=sum0;
-      _sum1=sum1;
-    }
-    @Override public void reduce(Sum t) { _sum0 += t._sum0; _sum1 += t._sum1; }
-  }
-
-  public static final String[] STOP_WORDS = new String[]{
+  public static final transient HashSet<String> STOP_WORDS = new HashSet<>();
+  public static final String[] STOP_WORDS_LIST = new String[]{
     "a","about","above","across","after","afterwards","again","against","all","almost","alone","along","already","also",
     "although","always","am","among","amongst","amoungst","amount","an","and","another","any","anyhow","anyone","anything",
     "anyway","anywhere","are","around","as","at","back","be","became","because","become","becomes","becoming","been",
@@ -59,6 +40,27 @@ public class Utils {
     "whose","why","will","with","within","without","would","yet","you","your","yours","yourself","yourselves"
   };
 
+
+  // get the class distributions
+  static class Sum extends MRTask<Sum> {
+    long _sum0;
+    long _sum1;
+    @Override public void map(Chunk[] cs) {
+      long sum0=0;
+      long sum1=0;
+      for(int r=0;r<cs[0]._len;++r) {
+        long v = cs[3].at8(r);
+        if( v!=0 && v!=1 ) {
+          System.out.println();
+        }
+        if( v==0 ) sum0++;
+        else sum1++;
+      }
+      _sum0=sum0;
+      _sum1=sum1;
+    }
+    @Override public void reduce(Sum t) { _sum0 += t._sum0; _sum1 += t._sum1; }
+  }
 
   public static String contractionMap(String s) {
     if( s.equals("aren't") ) return "are not";
@@ -168,6 +170,29 @@ public class Utils {
       }
       return (2.0 * intersection) / union;
     }
+  }
+
+  static int countCommon(String[] q1, String[] q2) {
+    HashSet<String> s1 = new HashSet<>();
+    Collections.addAll(s1,q1);
+    int cnt=0;
+    for(String s: q2)
+      if( s1.contains(s) ) cnt++;
+    return cnt;
+  }
+
+
+  static double countCommonRatio(String[] q1, String[] q2) {
+    HashSet<String> s1 = new HashSet<>();
+    Collections.addAll(s1,q1);
+    HashSet<String> s2 = new HashSet<>();
+    Collections.addAll(s2,q2);
+
+    if( s1.size()==0 || s2.size()==0 ) return 0;
+    int c1=0,c2=0;
+    for(String s: s1) if( s2.contains(s) ) c1++;
+    for(String s: s2) if( s1.contains(s) ) c2++;
+    return (double)(c1+c2) / (double) (s1.size() + s2.size());
   }
 
   public static double canberra_distance(double[] a, double[] b) {
@@ -409,6 +434,51 @@ public class Utils {
     String[] toks = strs.toArray(new String[strs.size()]);
     Arrays.sort(toks);
     return join(toks);
+  }
+
+  public static int countChars(String[] f) {
+    int c=0;
+    for( String ff: f) c += ff.length();
+    return c;
+  }
+
+  public static double cosine(String s1, String s2) {return _cos.distance(s1,s2);}
+  public static double demaru(String s1, String s2) {return _demaru.distance(s1,s2);}
+  public static double jaccard(String s1, String s2) {return _jac.distance(s1,s2);}
+  public static double jaroWinkler(String s1, String s2) {return _jwink.distance(s1,s2);}
+  public static double levenshtein(String s1, String s2) {return DiffLib.Levenshtein.lev_dist(s1,s2);}
+  public static double longestCommonSubsequence(String s1, String s2) {return _lcsub.distance(s1,s2);}
+  public static double ngram(String s1, String s2) {return _ngram.distance(s1,s2);}
+  public static double normalizedLevenshtein(String s1, String s2) {return _normLeven.distance(s1,s2);}
+  public static double optimalStringAlignment(String s1, String s2) {return _optimStringAlign.distance(s1,s2);}
+  public static double qgram(String s1, String s2) {return _qgram.distance(s1,s2);}
+  public static double sorensenDice(String s1, String s2) {return _sdice.distance(s1,s2);}
+
+  private static final transient Cosine _cos;
+  private static final transient Damerau _demaru;
+  private static final transient Jaccard _jac;
+  private static final transient JaroWinkler _jwink;
+  private static final transient Levenshtein _leven;
+  private static final transient LongestCommonSubsequence _lcsub;
+  private static final transient NGram _ngram;
+  private static final transient NormalizedLevenshtein _normLeven;
+  private static final transient OptimalStringAlignment _optimStringAlign;
+  private static final transient QGram _qgram;
+  private static final transient SorensenDice _sdice;
+
+  static {
+    Collections.addAll(STOP_WORDS,STOP_WORDS_LIST);
+    _cos = new Cosine();
+    _demaru = new Damerau();
+    _jac = new Jaccard();
+    _jwink = new JaroWinkler();
+    _leven = new Levenshtein();
+    _lcsub =  new LongestCommonSubsequence();
+    _ngram = new NGram();
+    _normLeven = new NormalizedLevenshtein();
+    _optimStringAlign = new OptimalStringAlignment();
+    _qgram = new QGram();
+    _sdice = new SorensenDice();
   }
 
 
