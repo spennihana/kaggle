@@ -22,7 +22,7 @@ public class WordEmbeddings extends Iced {
   static {
     // parse word embeddigns statically
     _embeddings_googl = read("./lib/w2vec_models/gw2vec",false);
-    _embeddings_glove = read("./lib/w2vec_models/glove",true);
+    _embeddings_glove = read("./lib/w2vec_models/glove.840B.300d.txt",true);
   }
 
   public static HashMap<BufferedString, double[]> read(String path, boolean glove) {
