@@ -67,13 +67,18 @@ public class WordEmbeddings extends Iced {
         ab.put4(strbits.length);
         ab.putA1(strbits);
         double[] d = em.get(bs);
-        for(double dd: d) ab.put8d(dd);
+        for(double dd: d) ab.put4(round(dd));
         out.write(ab.buf());
       }
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
     System.out.println("Finished in " + (System.currentTimeMillis() - s)/1000. + " seconds");
+  }
+
+  static int round(double d) {
+    d = d*1e6;
+    return (int)Math.round(d);
   }
 
   public static void main(String[] args) {
