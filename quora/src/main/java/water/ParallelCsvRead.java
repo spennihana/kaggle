@@ -4,7 +4,6 @@ import water.parser.BufferedString;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -12,6 +11,8 @@ import java.util.HashMap;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveAction;
+
+import static water.Value.NFS;
 
 public class ParallelCsvRead {
   private static final ForkJoinPool FJPOOL = ForkJoinPool.commonPool();
@@ -33,16 +34,22 @@ public class ParallelCsvRead {
   // do something with the byte arrays
   public void parse_bytes() {
     _pbtasks = new ParseBytesTask[_rtasks.length];
-    for(int i=0;i<_pbtasks.length;++i)
+    ArrayList<ParseBytesTask> pbtasks = new ArrayList<>();
+    for(int i=0;i<_pbtasks.length;++i) {
       _pbtasks[i] = new ParseBytesTask(_rtasks[i],i<_rtasks.length-1?_rtasks[i+1]._chk:null,i,(byte)' ');
-    FJPOOL.invoke(new ThrottledForkTask(_pbtasks,0,_pbtasks.length,null));
+      pbtasks.add(_pbtasks[i]);
+    }
+    ForkJoinTask.invokeAll(pbtasks);
   }
 
   public void parse_glove() {
     _pbtasks = new GloveBytesTask[_rtasks.length];
-    for(int i=0;i<_pbtasks.length;++i)
+    ArrayList<ParseBytesTask> pbtasks = new ArrayList<>();
+    for(int i=0;i<_pbtasks.length;++i) {
       _pbtasks[i] = new GloveBytesTask(_rtasks[i],i<_rtasks.length-1?_rtasks[i+1]._chk:null,i,(byte)' ');
-    FJPOOL.invoke(new ThrottledForkTask(_pbtasks,0,_pbtasks.length,null));
+      pbtasks.add(_pbtasks[i]);
+    }
+    ForkJoinTask.invokeAll(pbtasks);
   }
 
   public void raw_parse() {
@@ -237,10 +244,11 @@ public class ParallelCsvRead {
     ReadTask(int cidx, String path, long offset, int bytesRead) {_cidx=cidx;_path=path; _off=offset; _bytesRead=bytesRead;}
     @Override protected void compute() {
       try( FileInputStream s = new FileInputStream(new File(_path))) {
-        _chk = new byte[_bytesRead];
         FileChannel fc = s.getChannel();
         fc.position(_off);
-        fc.read(ByteBuffer.wrap(_chk));
+        AutoBuffer ab = new AutoBuffer(fc,true, NFS);
+        _chk = ab.getA1(_bytesRead);
+        ab.close();
       } catch( Exception e) {
         System.err.println("chunk: " + _cidx + "; bytesToRead: " + _bytesRead +"; offset: " + _off);
         throw new RuntimeException(e);
@@ -294,7 +302,7 @@ public class ParallelCsvRead {
     r.raw_parse();
     System.out.println("Raw disk read in " + (System.currentTimeMillis() - s)/1000. + " seconds");
     s=System.currentTimeMillis();
-    r.parse_glove();
+    r.parse_bytes();
     System.out.println("Parse bytes in " + (System.currentTimeMillis() - s)/1000. + " seconds");
     int nrows=0;
     for(int i=0;i<r._pbtasks.length;++i) {
