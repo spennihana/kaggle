@@ -60,7 +60,6 @@ public class Modeling {
     parms._train = training._key;
     parms._response_column = "is_duplicate";
     parms._ignored_columns = new String[]{"id"};
-
     GBM m = new GBM(parms);
     m.trainModel();
     GBMModel model = m.get();
