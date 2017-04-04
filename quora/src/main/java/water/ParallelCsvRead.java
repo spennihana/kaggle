@@ -9,11 +9,12 @@ import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveAction;
 
 public class ParallelCsvRead {
-
+  private static final ForkJoinPool FJPOOL = ForkJoinPool.commonPool();
   public ReadTask[] _rtasks;
   public ParseBytesTask[] _pbtasks;
   int _nchks;
@@ -32,31 +33,22 @@ public class ParallelCsvRead {
   // do something with the byte arrays
   public void parse_bytes() {
     _pbtasks = new ParseBytesTask[_rtasks.length];
-    ArrayList<ParseBytesTask> pbtasks = new ArrayList<>();
-    for(int i=0;i<_pbtasks.length;++i) {
+    for(int i=0;i<_pbtasks.length;++i)
       _pbtasks[i] = new ParseBytesTask(_rtasks[i],i<_rtasks.length-1?_rtasks[i+1]._chk:null,i,(byte)' ');
-      pbtasks.add(_pbtasks[i]);
-    }
-    ForkJoinTask.invokeAll(pbtasks);
+    FJPOOL.invoke(new ThrottledForkTask(_pbtasks,0,_pbtasks.length,null));
   }
 
   public void parse_glove() {
     _pbtasks = new GloveBytesTask[_rtasks.length];
-    ArrayList<ParseBytesTask> pbtasks = new ArrayList<>();
-    for(int i=0;i<_pbtasks.length;++i) {
+    for(int i=0;i<_pbtasks.length;++i)
       _pbtasks[i] = new GloveBytesTask(_rtasks[i],i<_rtasks.length-1?_rtasks[i+1]._chk:null,i,(byte)' ');
-      pbtasks.add(_pbtasks[i]);
-    }
-    ForkJoinTask.invokeAll(pbtasks);
+    FJPOOL.invoke(new ThrottledForkTask(_pbtasks,0,_pbtasks.length,null));
   }
 
   public void raw_parse() {
-    ArrayList<ReadTask> rtasks = new ArrayList<>();
-    for(int i=0;i<_rtasks.length;++i) {
+    for(int i=0;i<_rtasks.length;++i)
       _rtasks[i] = new ReadTask(i,_path, (long)i * (long)ReadTask.CHK_SIZE, i == _rtasks.length - 1 ? (int) (_nbytes - ReadTask.CHK_SIZE * (_nchks - 1)) : ReadTask.CHK_SIZE);
-      rtasks.add(_rtasks[i]);
-    }
-    ForkJoinTask.invokeAll(rtasks);
+    FJPOOL.invoke(new ThrottledForkTask(_rtasks,0,_rtasks.length,null));
   }
 
   public static class ParseBytesTask extends RecursiveAction {
@@ -256,8 +248,48 @@ public class ParallelCsvRead {
     }
   }
 
+  static class ThrottledForkTask extends RecursiveAction {
+    final RecursiveAction[] _tasks;
+    final int _lo, _hi;
+    ThrottledForkTask _next;
+    ThrottledForkTask(RecursiveAction[] tasks, int lo, int hi, ThrottledForkTask next) {
+      _tasks=tasks;
+      _lo=lo;
+      _hi=hi;
+      _next=next;
+    }
+
+    void leaf(int l, int h) {
+      ArrayList<RecursiveAction> tasks = new ArrayList<>();
+      tasks.addAll(Arrays.asList(_tasks).subList(l, h));
+      ForkJoinTask.invokeAll(tasks);
+    }
+
+    @Override protected void compute() {
+      int l=_lo;
+      int h=_hi;
+      ThrottledForkTask right = null;
+      while( h-l > 1 && getSurplusQueuedTaskCount() <= 3 ) {
+        int mid = (l+h) >>> 1;
+        right = new ThrottledForkTask(_tasks,mid,h,right);
+        right.fork();
+        h=mid;
+      }
+      leaf(_lo,_hi);
+      while( right !=null ) {
+        if( right.tryUnfork() ) {
+          right.leaf(right._lo,right._hi);
+        } else {
+          right.join();
+        }
+        right=right._next;
+      }
+    }
+  }
+
   public static void main(String[] args) {
-    ParallelCsvRead r = new ParallelCsvRead("./lib/w2vec_models/glove.840B.300d.txt");
+    ParallelCsvRead r = new ParallelCsvRead("./lib/w2vec_models/gw2vec");
+//    ParallelCsvRead r = new ParallelCsvRead("./lib/w2vec_models/glove.840B.300d.txt");
     long s = System.currentTimeMillis();
     r.raw_parse();
     System.out.println("Raw disk read in " + (System.currentTimeMillis() - s)/1000. + " seconds");
