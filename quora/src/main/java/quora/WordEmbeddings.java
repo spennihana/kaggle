@@ -5,22 +5,27 @@ import water.Iced;
 import water.ParallelCsvRead;
 import water.parser.BufferedString;
 
-import java.util.Arrays;
 import java.util.HashMap;
 
 public class WordEmbeddings extends Iced {
 
-  public static transient HashMap<BufferedString, double[]> _embeddings;
-  public static transient WordEmbeddings _em;
+  public enum WORD_EM {
+    GLOVE(_embeddings_glove),
+    GOOGL(_embeddings_googl);
+    private final HashMap<BufferedString,double[]> _em;
+    WORD_EM(HashMap<BufferedString,double[]> em) { _em=em; }
+    public double[] get(String w) { return _em.get(new BufferedString(w)); }
+  }
+  public static transient HashMap<BufferedString, double[]> _embeddings_googl;
+  public static transient HashMap<BufferedString, double[]> _embeddings_glove;
 
   static {
     // parse word embeddigns statically
-    String word2vecPath ="./lib/w2vec_models/gw2vec";
-    read(word2vecPath);
-    _em = new WordEmbeddings();
+    _embeddings_googl = read("./lib/w2vec_models/gw2vec",false);
+    _embeddings_glove = read("./lib/w2vec_models/glove",true);
   }
 
-  public static void read(String path) {
+  public static HashMap<BufferedString, double[]> read(String path, boolean glove) {
     ParallelCsvRead pcsv = new ParallelCsvRead(path);
     long start = System.currentTimeMillis();
     long elapsed;
@@ -30,26 +35,19 @@ public class WordEmbeddings extends Iced {
     elapsed = System.currentTimeMillis() - start;
     System.out.println("Disk to RAM read in " + elapsed/1000. + " seconds" );
     start = System.currentTimeMillis();
-    pcsv.parse_bytes();
+    if( glove ) pcsv.parse_glove();
+    else        pcsv.parse_bytes();
     elapsed2 = System.currentTimeMillis() - start;
     System.out.println("Parsed word embeddings in " + elapsed2/1000. + " seconds");
-    _embeddings = new HashMap<>();
+    HashMap<BufferedString, double[]> embeddings = new HashMap<>();
     start = System.currentTimeMillis();
     for(ParallelCsvRead.ParseBytesTask pbt: pcsv._pbtasks) {
-      _embeddings.putAll(pbt._rows);
+      embeddings.putAll(pbt._rows);
       pbt._rows=null;
     }
     elapsed3 = System.currentTimeMillis() - start;
     System.out.println("Reducing word embeddings together in " + elapsed3/1000. + " seconds");
     System.out.println("Total embeddings parse time: " + (elapsed + elapsed2 + elapsed3)/1000. +  " seconds");
-  }
-
-  public double[] get(String w) {
-    return _embeddings.get(new BufferedString(w));
-  }
-
-  public static void main(String[] args){
-    WordEmbeddings wem = new WordEmbeddings();
-    System.out.println(Arrays.toString(wem.get("hello")));
+    return embeddings;
   }
 }

@@ -13,6 +13,7 @@ import java.util.Arrays;
 import java.util.Set;
 
 import static quora.Utils.STOP_WORDS;
+import static quora.Utils.fillEmVecs;
 
 public class PreprocessorTask extends MRTask<PreprocessorTask> {
 
@@ -20,7 +21,6 @@ public class PreprocessorTask extends MRTask<PreprocessorTask> {
   private final int Q2;
   private final boolean _test;
   transient Feature[] _features;
-  transient WordEmbeddings _em;
 
   PreprocessorTask(Feature[] features, boolean train) {
     _features=features;
@@ -30,20 +30,17 @@ public class PreprocessorTask extends MRTask<PreprocessorTask> {
   }
 
   String[] getNames() {
-    String[] names = new String[_features.length+1];
-    if( _test ) {
-      names[0]="id";
-      int nidx=1;
-      for(int i=0;i<_features.length;++i) names[nidx++] = _features[i]._name;
-      return names;
+    ArrayList<String> names = new ArrayList<>();
+    if( _test ) names.add("id");
+    for (Feature f : _features) {
+      if (f._name.startsWith("DUMMY")) continue;
+      names.add(f._name);
     }
-    names[_features.length] = "is_duplicate";
-    for(int i=0;i<_features.length;++i) names[i] = _features[i]._name;
-    return names;
+    if(!_test) names.add("is_duplicate");
+    return names.toArray(new String[names.size()]);
   }
 
   @Override public void setupLocal() {
-    _em = WordEmbeddings._em;
     if( _features==null ) {
       _features = FeatureCompute.computeFeatures();
     }
@@ -83,10 +80,28 @@ public class PreprocessorTask extends MRTask<PreprocessorTask> {
         f2 = Utils.join(fw2);
 
         for (Feature f : _features) {
+          switch (f._name) {
+            case "DUMMY_COMPUTE_FC_W":
+              fc._s1=s1; fc._s2=s2;
+              fc.comptue(w1, w2);
+              continue;
+            case "DUMMY_COMPUTE_FC_F":
+              fc._s1 =f1; fc._s2=f2;
+              fc.comptue(fw1, fw2);
+              continue;
+            case "DUMMY_COMPUTE_EM_W":
+              fillEmVecs(w1, f._em, we_s1, we_ss1);
+              fillEmVecs(w2, f._em, we_s2, we_ss2);
+              continue;
+            case "DUMMY_COMPUTE_EM_F":
+              fillEmVecs(fw1, f._em, we_s1, we_ss1);
+              fillEmVecs(fw2, f._em, we_s2, we_ss2);
+              continue;
+          }
           if( f._weop==null )
             ncs[ncs_idx++].addNum(f._op.op(s1, s2, w1, w2, f1, f2, fw1, fw2, fc));
           else
-            ncs[ncs_idx++].addNum(f._weop.weop(w1,w2,fw1,fw2,we_s1,we_ss1,we_s2,we_ss2,_em));
+            ncs[ncs_idx++].addNum(f._weop.weop(w1,w2,fw1,fw2,we_s1,we_ss1,we_s2,we_ss2,f._em));
         }
         if (!_test) ncs[ncs_idx].addNum(cs[cs.length - 1].at8(r));
       } catch( Exception e) {
@@ -119,8 +134,9 @@ public class PreprocessorTask extends MRTask<PreprocessorTask> {
     public String _name;
     public feature_op _op;
     public we_op _weop;
+    WordEmbeddings.WORD_EM _em;
     public Feature(String name, feature_op op) { _name=name; _op=op; _weop=null; }
-    public Feature(String name, float f, we_op weop) { _name=name; _op=null; _weop=weop; }
+    public Feature(String name, WordEmbeddings.WORD_EM em, we_op weop) { _name=name; _op=null; _weop=weop; _em=em; }
     /**
      * lambda for computing different features
      */
@@ -130,7 +146,7 @@ public class PreprocessorTask extends MRTask<PreprocessorTask> {
 
     interface we_op {
       double weop(String[] w1, String[] w2, String[] fw1, String[] fw2, double[] ws1, double[] wss1,
-                  double[] ws2, double[] wss2, WordEmbeddings em);
+                  double[] ws2, double[] wss2, WordEmbeddings.WORD_EM em);
     }
   }
 }

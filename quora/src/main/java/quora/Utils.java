@@ -1,6 +1,8 @@
 package quora;
 
 import info.debatty.java.stringsimilarity.*;
+import org.apache.commons.math3.stat.descriptive.moment.Kurtosis;
+import org.apache.commons.math3.stat.descriptive.moment.Skewness;
 import org.apache.commons.math3.util.FastMath;
 import water.MRTask;
 import water.fvec.Chunk;
@@ -240,7 +242,7 @@ public class Utils {
     return totalDistance;
   }
 
-  public static double wmd(String[] w1, String[] w2, WordEmbeddings em) {
+  public static double wmd(String[] w1, String[] w2, WordEmbeddings.WORD_EM em) {
 
     HashMap<String, double[]> embeddings = new HashMap<>();
     int len_t1=0, len_t2=0;
@@ -442,7 +444,7 @@ public class Utils {
     return c;
   }
 
-  public static void fillEmVecs(String[] words, WordEmbeddings em, double[] ws, double[] wss) {
+  public static void fillEmVecs(String[] words, WordEmbeddings.WORD_EM em, double[] ws, double[] wss) {
     for(int i=0;i<ws.length;++i) ws[i]=wss[i]=0;
     for(String s: words ) {
       double[] f = em.get(s);
@@ -462,18 +464,29 @@ public class Utils {
   }
 
   static double[] sqrt(double[] a) {
-    for(int i=0;i<a.length;++i) a[i] = Math.sqrt(a[i]);
+    for(int i=0;i<a.length;++i) {
+      double aa = Double.isNaN(a[i])?0:a[i];
+      a[i] = Math.sqrt(aa);
+    }
     return a;
   }
 
   static void add(double[] a, double[] f) {
     if( f==null ) return;
-    for(int i=0;i<f.length;++i) a[i] += f[i];
+    for(int i=0;i<f.length;++i) {
+      double aa = Double.isNaN(a[i])?0:a[i];
+      double ff = Double.isNaN(f[i])?0:f[i];
+      a[i] = aa + ff;
+    }
   }
 
   static void addSq(double[] a, double[] f) {
     if( f==null ) return;
-    for(int i=0;i<f.length;++i) a[i] += f[i]*f[i];
+    for(int i=0;i<f.length;++i) {
+      double aa = Double.isNaN(a[i])?0:a[i];
+      double ff = Double.isNaN(f[i])?0:f[i];
+      a[i] = aa + ff*ff;
+    }
   }
 
   static double cosine_distance(double[] a, double[] b) {
@@ -481,14 +494,28 @@ public class Utils {
     double sum_a2 = 0;
     double sum_b2 = 0;
     for(int i=0;i<a.length;++i) {
-      sum_ab += a[i]*b[i];
-      sum_a2 += a[i]*a[i];
-      sum_b2 += b[i]*b[i];
+      double aa = Double.isNaN(a[i])?0:a[i];
+      double bb = Double.isNaN(b[i])?0:b[i];
+      sum_ab += aa*bb;
+      sum_a2 += aa*aa;
+      sum_b2 += bb*bb;
     }
     double sim = sum_ab / (Math.sqrt(sum_a2) * Math.sqrt(sum_b2) );
     return 1-sim;
   }
 
+  static double minkowski_distance(double[] a, double[] b, int p) {
+    double sum=0;
+    for(int i=0;i<a.length;++i) {
+      double aa = Double.isNaN(a[i])?0:a[i];
+      double bb = Double.isNaN(b[i])?0:b[i];
+      sum += Math.pow(Math.abs(aa-bb), p);
+    }
+    return Math.pow(sum, 1./p);
+  }
+
+  static double skew(double[] a) {return new Skewness().evaluate(a,0,a.length);}
+  static double kurt(double[] a) {return new Kurtosis().evaluate(a,0,a.length);}
   public static double cosine(String s1, String s2) {return _cos.distance(s1,s2);}
   public static double demaru(String s1, String s2) {return _demaru.distance(s1,s2);}
   public static double jaccard(String s1, String s2) {return _jac.distance(s1,s2);}

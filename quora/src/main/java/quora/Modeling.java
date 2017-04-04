@@ -21,7 +21,7 @@ public class Modeling {
   public static void main(String[] args) {
     H2OApp.main(args);
 
-    Frame training = importParseFrame("./data/train_feats2.csv", "training_features");
+    Frame training = importParseFrame("./data/train_feats17.csv", "training_features");
     GBMModel.GBMParameters parms = new GBMModel.GBMParameters();
 
     int subnum;
@@ -52,9 +52,9 @@ public class Modeling {
 //    test._key = Key.make("test_frame");
 //    DKV.put(test);
 
-    parms._ntrees = 300;
-    parms._learn_rate = 0.005;
-    parms._max_depth = 9;
+    parms._ntrees = 500;
+    parms._learn_rate = 0.02;
+    parms._max_depth = 4;
     parms._stopping_metric = ScoreKeeper.StoppingMetric.logloss;
 //    parms._valid = test._key;
     parms._train = training._key;
@@ -73,7 +73,7 @@ public class Modeling {
     }
 
     // predict and save predictions
-    predict(model,"./data/test_feats2.csv",subnum);
+    predict(model,"./data/test_feats17.csv",subnum);
 
     H2O.shutdown(0);
     System.exit(0);
