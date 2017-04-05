@@ -65,10 +65,11 @@ public class WordEmbeddings extends Iced {
         AutoBuffer ab = new AutoBuffer();
         byte[] strbits = bs.getBuffer();
         ab.put4(strbits.length);
-        ab.putA1(strbits);
+        ab.putA1(strbits,strbits.length);
         double[] d = em.get(bs);
         for(double dd: d) ab.put4(round(dd));
-        ab.put1('\1');
+        ab.put1('\b');
+        ab.put1('\b');
         out.write(ab.buf());
       }
     } catch (IOException e) {
