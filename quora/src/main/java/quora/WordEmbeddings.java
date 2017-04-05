@@ -26,6 +26,8 @@ public class WordEmbeddings extends Iced {
   void get(BufferedString s,double[] res) {
     Arrays.fill(res,0);
     BufferedString bs= _map.get(s);
+    if( bs==null )
+      return;
     int i=bs.getOffset();
     byte[] buf = bs.getBuffer();
     int idx=0;
