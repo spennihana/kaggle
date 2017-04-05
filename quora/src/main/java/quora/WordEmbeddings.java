@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 
 public class WordEmbeddings extends Iced {
+  private static final double SHIFT=1./1e6;
 
   public enum WORD_EM {
     GLOVE(new ParallelCsvRead("./lib/w2vec_models/glove.bin",1005,2).parse_bin()),
@@ -33,7 +34,7 @@ public class WordEmbeddings extends Iced {
     int idx=0;
     int i=off;
     for(;i<off+4*300;i+=4)
-      res[idx++]=(double)readInt(i,buf)/1e6;
+      res[idx++]=(double)readInt(i,buf)*SHIFT;
   }
 
   int readInt(int pos, byte[] buf) {

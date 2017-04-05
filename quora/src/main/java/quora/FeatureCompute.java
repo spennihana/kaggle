@@ -31,7 +31,7 @@ public class FeatureCompute {
     H2OApp.main(args);
     int id=18;
     boolean sample=false;
-    runTrain(id,sample);
+//    runTrain(id,sample);
     runTest (id,sample);
     H2O.shutdown(0);
   }
