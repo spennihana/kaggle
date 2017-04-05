@@ -8,12 +8,10 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveAction;
 
 public class ParallelCsvRead {
-  private static final ForkJoinPool FJPOOL = ForkJoinPool.commonPool();
   public ReadTask[] _rtasks;
   ParseBitsTask[] _pbits;
   final int _bytesPerChk;
