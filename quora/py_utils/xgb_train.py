@@ -53,7 +53,7 @@ scale_pos_weight=1,
 reg_alpha=0.01
 )
 
-evalset = [(xtrain.as_matrix(), ytrain.as_matrix())] #,(xtest.as_matrix(),ytest.as_matrix())]
+evalset = [(xtrain.as_matrix(), ytrain.as_matrix()), (xtest.as_matrix(),ytest.as_matrix())]
 xtrain = None
 ytrain = None
 xtest = None
