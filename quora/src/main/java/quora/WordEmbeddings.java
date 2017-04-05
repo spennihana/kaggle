@@ -18,13 +18,13 @@ public class WordEmbeddings extends Iced {
     WORD_EM(HashMap<BufferedString,double[]> em) { _em=em; }
     public double[] get(String w) { return _em.get(new BufferedString(w)); }
   }
-//  public static transient HashMap<BufferedString, double[]> _embeddings_googl;
+  public static transient HashMap<BufferedString, double[]> _embeddings_googl;
   public static transient HashMap<BufferedString, double[]> _embeddings_glove;
 
   static {
     // parse word embeddigns statically
-//    _embeddings_googl = read("./lib/w2vec_models/gw2vec",false);
-    _embeddings_glove = read("./lib/w2vec_models/glove.840B.300d.txt",true);
+    _embeddings_googl = read("./lib/w2vec_models/gw2vec_sample2",false);
+//    _embeddings_glove = read("./lib/w2vec_models/glove.840B.300d.txt",true);
     compress();
   }
 
@@ -58,8 +58,8 @@ public class WordEmbeddings extends Iced {
   static void compress() {
     long s = System.currentTimeMillis();
     System.out.println("compressing embeddings...");
-    HashMap<BufferedString,double[]> em = _embeddings_glove;
-    String outpath = "./lib/w2vec_models/glove.bin";
+    HashMap<BufferedString,double[]> em = _embeddings_googl;
+    String outpath = "./lib/w2vec_models/googl.bin_sample";
     try(FileOutputStream out = new FileOutputStream(new File(outpath))) {
       for(BufferedString bs: em.keySet()) {
         AutoBuffer ab = new AutoBuffer();
@@ -68,6 +68,7 @@ public class WordEmbeddings extends Iced {
         ab.putA1(strbits);
         double[] d = em.get(bs);
         for(double dd: d) ab.put4(round(dd));
+        ab.put1('\1');
         out.write(ab.buf());
       }
     } catch (IOException e) {
