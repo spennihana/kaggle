@@ -5,7 +5,7 @@ import water.H2O;
 public class Quora {
 
   public static void main(String[] args) {
-    WordEmbeddings em = new WordEmbeddings(); // load word embeddings statically now
+    WordEmbeddings.WORD_EM tapEnumToLoad = WordEmbeddings.WORD_EM.GLOVE;
     H2O.main(args);
   }
 

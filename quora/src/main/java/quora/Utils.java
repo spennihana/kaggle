@@ -242,21 +242,26 @@ public class Utils {
     return totalDistance;
   }
 
-  public static double wmd(String[] w1, String[] w2, WordEmbeddings.WORD_EM em) {
+  static boolean allzero(double[] d) {
+    for(double dd: d) if(dd!=0) return false;
+    return true;
+  }
 
+  public static double wmd(String[] w1, String[] w2, double[] d, WordEmbeddings.WORD_EM em) {
+    Arrays.fill(d,0);
     HashMap<String, double[]> embeddings = new HashMap<>();
     int len_t1=0, len_t2=0;
     for(String w: w1) {
-      double[] d = em.get(w);
-      if( d==null ) continue;
+      em.get(w,d);
+      if( allzero(d) ) continue;
       embeddings.put(w,d);
       len_t1++;
     }
     for(String w: w2) {
       if( embeddings.get(w)!=null ) len_t2++;
       else {
-        double[] d = em.get(w);
-        if( d==null ) continue;
+        em.get(w,d);
+        if( allzero(d) ) continue;
         embeddings.put(w,d);
         len_t2++;
       }
@@ -444,10 +449,10 @@ public class Utils {
     return c;
   }
 
-  public static void fillEmVecs(String[] words, WordEmbeddings.WORD_EM em, double[] ws, double[] wss) {
+  public static void fillEmVecs(String[] words, WordEmbeddings.WORD_EM em, double[] f, double[] ws, double[] wss) {
     for(int i=0;i<ws.length;++i) ws[i]=wss[i]=0;
     for(String s: words ) {
-      double[] f = em.get(s);
+      em.get(s,f);
       if( f==null ) continue;
       add(ws, f);
       addSq(wss, f);

@@ -49,6 +49,7 @@ public class PreprocessorTask extends MRTask<PreprocessorTask> {
     // some re-usables
     BufferedString bstr = new BufferedString();
     FuzzyCmp fc = new FuzzyCmp();
+    double[] raw = new double[300];
     double[] we_s1 = new double[300]; // word embeddings vector
     double[] we_ss1= new double[300]; // sum squared of word embeddings
 
@@ -90,18 +91,18 @@ public class PreprocessorTask extends MRTask<PreprocessorTask> {
               fc.comptue(fw1, fw2);
               continue;
             case "DUMMY_COMPUTE_EM_W":
-              fillEmVecs(w1, f._em, we_s1, we_ss1);
-              fillEmVecs(w2, f._em, we_s2, we_ss2);
+              fillEmVecs(w1, f._em, raw, we_s1, we_ss1);
+              fillEmVecs(w2, f._em, raw, we_s2, we_ss2);
               continue;
             case "DUMMY_COMPUTE_EM_F":
-              fillEmVecs(fw1, f._em, we_s1, we_ss1);
-              fillEmVecs(fw2, f._em, we_s2, we_ss2);
+              fillEmVecs(fw1, f._em, raw, we_s1, we_ss1);
+              fillEmVecs(fw2, f._em, raw, we_s2, we_ss2);
               continue;
           }
           if( f._weop==null )
             ncs[ncs_idx++].addNum(f._op.op(s1, s2, w1, w2, f1, f2, fw1, fw2, fc));
           else
-            ncs[ncs_idx++].addNum(f._weop.weop(w1,w2,fw1,fw2,we_s1,we_ss1,we_s2,we_ss2,f._em));
+            ncs[ncs_idx++].addNum(f._weop.weop(w1,w2,fw1,fw2,we_s1,we_ss1,we_s2,we_ss2,raw,f._em));
         }
         if (!_test) ncs[ncs_idx].addNum(cs[cs.length - 1].at8(r));
       } catch( Exception e) {
@@ -146,7 +147,7 @@ public class PreprocessorTask extends MRTask<PreprocessorTask> {
 
     interface we_op {
       double weop(String[] w1, String[] w2, String[] fw1, String[] fw2, double[] ws1, double[] wss1,
-                  double[] ws2, double[] wss2, WordEmbeddings.WORD_EM em);
+                  double[] ws2, double[] wss2, double[] rawEm, WordEmbeddings.WORD_EM em);
     }
   }
 }
