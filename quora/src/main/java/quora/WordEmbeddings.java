@@ -6,7 +6,10 @@ import water.Iced;
 import water.ParallelCsvRead;
 import water.parser.BufferedString;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 
 public class WordEmbeddings extends Iced {
@@ -23,7 +26,7 @@ public class WordEmbeddings extends Iced {
 
   static {
     // parse word embeddigns statically
-    _embeddings_googl = read("./lib/w2vec_models/gw2vec_sample2",false);
+    _embeddings_googl = read("./lib/w2vec_models/gw2vec_sample",false);
 //    _embeddings_glove = read("./lib/w2vec_models/glove.840B.300d.txt",true);
     compress();
   }
@@ -59,16 +62,21 @@ public class WordEmbeddings extends Iced {
     long s = System.currentTimeMillis();
     System.out.println("compressing embeddings...");
     HashMap<BufferedString,double[]> em = _embeddings_googl;
+
+    int WIDTH = 208; // 208 is maximum string length for googl
+//    int width = 1005; // the glove width
     String outpath = "./lib/w2vec_models/googl.bin_sample";
     try(FileOutputStream out = new FileOutputStream(new File(outpath))) {
+      byte[] strbits = new byte[WIDTH];
       for(BufferedString bs: em.keySet()) {
+        Arrays.fill(strbits, (byte) 0);
         AutoBuffer ab = new AutoBuffer();
-        byte[] strbits = bs.getBuffer();
-        ab.put4(strbits.length);
+        byte[] bsbits = bs.getBuffer();
+        System.arraycopy(bsbits,0,strbits,0,bsbits.length);
         ab.putA1(strbits,strbits.length);
         double[] d = em.get(bs);
         for(double dd: d) ab.put4((int)Math.round(dd*1e6));
-        ab.put1('\b');
+        assert ab.position() == WIDTH + 4*300; // every line is fixed width
         out.write(ab.buf());
       }
     } catch (IOException e) {
