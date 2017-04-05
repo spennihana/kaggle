@@ -87,6 +87,7 @@ public class ParallelCsvRead {
 
     int _cidx;
     public HashMap<BufferedString, double[]> _rows;
+    int _max;
     ParseBytesTask(ReadTask byteArray, byte[] next_bytes, int cidx, byte sep) {
       _in=byteArray._chk;
       byteArray._chk=null; // free the pointer from byteArray...
@@ -98,6 +99,7 @@ public class ParallelCsvRead {
     // read a string followed by 300 doubles
     @Override protected void compute() {
       _rows = new HashMap<>();
+      _max = Integer.MIN_VALUE;
       int pos=0;
       byte b;
       if( _cidx!=0 ) { // if not the first chk, means another thread already parsed these bits
@@ -134,11 +136,11 @@ public class ParallelCsvRead {
       i--; // skip the LF
       i--; // skip a \b
       i--; // skip another \b
-      int x;
+      int x=-1;
       while( --i>=start ) { // skip the white space by decrementing i
         x=i;
+        if( em_idx< 0 ) break;
         while( i>= start && bits[i]!=CHAR_SPACE ) i--;
-        int fidx=0;
         if( em_idx>=0 ) {
           double d=0;
           // parse each byte into a digit...
@@ -159,14 +161,16 @@ public class ParallelCsvRead {
           }
           if( !pos ) d=-d;
           em[em_idx--]=d;
-        } else {
-          byte[] field = new  byte[x-i];
-          for (int ii = i + 1; ii <= x; ++ii)
-            field[fidx++] = bits[ii];
-          _rows.put(new BufferedString(field,0,field.length),em);
-          break;
         }
       }
+      i=start-1;
+      int fidx=0;
+      assert x > 0 && x > i;
+      byte[] field = new  byte[x-i];
+      for (int ii = i + 1; ii <= x; ++ii)
+        field[fidx++] = bits[ii];
+      _rows.put(new BufferedString(field,0,field.length),em);
+      _max = Math.max(field.length,_max);
       assert em_idx <= 0;
       assert i < start;
     }
@@ -185,9 +189,10 @@ public class ParallelCsvRead {
       i--; // skip the LF
       if( bits[i]=='\b') i--; // skip a \b
       if( bits[i]=='\b') i--; // skip another \b
-      int x;
+      int x=-1;
       while( i>=start ) { // skip the white space by decrementing i
         x=i;
+        if( em_idx <0 ) break;
         boolean sci=false;
         while( i>= start && bits[i]!=CHAR_SPACE ) {
           sci |= bits[i]=='e';
@@ -220,15 +225,17 @@ public class ParallelCsvRead {
             if (!pos) d = -d;
             em[em_idx--] = d;
           }
-        } else {
-          byte[] field = new  byte[x-i];
-          for (int ii = i + 1; ii <= x; ++ii)
-            field[fidx++] = bits[ii];
-          _rows.put(new BufferedString(field,0,field.length),em);
-          break;
         }
         i--;
       }
+      int fidx=0;
+      i=start-1;
+      assert x > 0 && x > i;
+      byte[] field = new  byte[x-i];
+      for (int ii = i + 1; ii <= x; ++ii)
+        field[fidx++] = bits[ii];
+      _rows.put(new BufferedString(field,0,field.length),em);
+      _max = Math.max(field.length,_max);
       assert em_idx <= 0;
       assert i < start;
     }
@@ -296,14 +303,20 @@ public class ParallelCsvRead {
   }
 
   public static void main(String[] args) {
-    ParallelCsvRead r = new ParallelCsvRead("./lib/w2vec_models/gw2vec");
-//    ParallelCsvRead r = new ParallelCsvRead("./lib/w2vec_models/glove.840B.300d.txt");
+//    ParallelCsvRead r = new ParallelCsvRead("./lib/w2vec_models/gw2vec");
+    ParallelCsvRead r = new ParallelCsvRead("./lib/w2vec_models/glove.840B.300d.txt");
     long s = System.currentTimeMillis();
     r.raw_parse();
     System.out.println("Raw disk read in " + (System.currentTimeMillis() - s)/1000. + " seconds");
     s=System.currentTimeMillis();
-    r.parse_bytes();
+//    r.parse_bytes();
+    r.parse_glove();
     System.out.println("Parse bytes in " + (System.currentTimeMillis() - s)/1000. + " seconds");
+    int max = r._pbtasks[0]._max;
+    for(int i=1;i<r._pbtasks.length;++i) {
+      max = Math.max(max, r._pbtasks[i]._max);
+    }
+    System.out.println("MAX STR LEN: " + max);
     int nrows=0;
     for(int i=0;i<r._pbtasks.length;++i) {
       nrows += r._pbtasks[i]._rows.size();
