@@ -7,7 +7,7 @@ def write_preds(f, preds, ids):
     pred = "{},{}\n".format(ids[pid], preds[pid][1])
     f.write(pred)
 
-test_fr = "../data/test_feats17.csv"
+test_fr = "../data/test_feats18.csv"
 next_sub = 0 
 with open("../submissions/next", "r") as f:
   next_sub = int(f.readline()) + 1 
@@ -25,8 +25,14 @@ with open(test_fr, "r") as testing:
     line = line.strip()
     line = line.split(",")
     test_id = line[0]
-    line = [float("nan") if z=='' else float(z) for z in line[1:]]
-    lines += [line]
+    row = []
+    for z in line[1:]:
+      if   z=='':         d=float("nan")
+      elif z=='Infinity': d=float("inf")
+      elif z=='-Infinity':d=float("-inf")
+      else:               d=float(z)
+      row += [d]
+    lines += [row]
     ids  += [test_id]
     if len(lines) == 50000:
       preds = clf.predict_proba(lines)

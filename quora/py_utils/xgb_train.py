@@ -6,7 +6,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import StratifiedShuffleSplit
 
-training = pd.read_csv("../data/train_feats17.csv")
+training = pd.read_csv("../data/train_feats18.csv")
 print "loaded training frame"
 
 pos_train = training[training['is_duplicate']==1]
@@ -43,7 +43,7 @@ train = None
 clf = xgb.XGBClassifier(
 learning_rate =0.02,
 n_estimators=500,
-max_depth=9,
+max_depth=4,
 min_child_weight=1,
 gamma=0.1,
 subsample=.7,

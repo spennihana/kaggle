@@ -31,7 +31,7 @@ public class FeatureCompute {
     H2OApp.main(args);
     int id=18;
     boolean sample=false;
-//    runTrain(id,sample);
+    runTrain(id,sample);
     runTest (id,sample);
     H2O.shutdown(0);
   }
@@ -75,14 +75,6 @@ public class FeatureCompute {
   }
 
   static Feature[] computeFeatures() {
-
-// 'jwink', 'wes_cosine', 'wes1_sum', 'wes2_sum', 'strike_match', 'wes2_sum2', 'wes_cosine2', 'wes1_sum2', 'wess2_sum',
-// 'wess1_sum', 'wess1_sum2', 'cosine', 'prat', 'rat_sort', 'leven_norm', 'wess_cosine2', 'jaccard', 'prat_sort', 'rat_set',
-// 'abs_wes_sum', 'jwink2', 'wratio', 'common_ratio2', 'emd', 'abs_wess_sum', 'ngram', 'common_ratio', 'abs_wes_sum2', 'q2_chars',
-// 'q1_chars2', 'zratio', 'lcsub', 'canberra', 'wess_cosine', 'qgram', 'q1_chars', 'wmd', 'rat_set2', 'prat2', 'prat_set',
-// 'emd2', 'q2_chars2'
-
-
     String[] bestFeatures = new String[]{
       "q2_chars2", "prat2", "emd2", "abs_wess_sum2", "qgram2", "prat_set", "q1_chars2", "q1_chars", "wmd", "abs_wes_sum2",
       "lcsub", "rat_set2", "zratio", "ngram", "q2_chars", "wess_cosine", "qgram", "canberra", "rat_set", "common_ratio",
@@ -91,92 +83,104 @@ public class FeatureCompute {
       "strike_match", "wes_cosine2", "wes1_sum2", "wes2_sum2", "wes2_sum", "wes1_sum", "wes_cosine", "jwink"
     };
 
+    String[] bestFeatures2= new String[]{
+      "wes2_skew_glove", "wess2_kurt_glove", "wes1_sum2", "wes_minkowski_glove", "wes1_kurt_glove", "wes1_sum",
+      "wess2_kurt", "q1_chars2", "wess_euclidean_glove", "wes2_kurt_glove", "wess_cosine2", "wratio", "wess1_sum_glove",
+      "canberra_glove2", "wess2_sum_glove2", "jwink2", "wess1_kurt_glove", "wess2_sum_glove", "prat_sort", "wess2_skew_glove2",
+      "wess1_sum", "wess_hamming", "zratio", "wess_hamming_glove2", "rat_sort", "cosine", "wes1_skew_glove", "canberra",
+      "wess2_sum", "canberra_glove", "wes_hamming_glove2", "q1_chars", "ngram", "wes2_skew_glove2", "wess1_sum_glove2",
+      "jaccard", "rat_set2", "wes1_skew_glove2", "wes_hamming_glove", "wess_hamming_glove", "prat", "wess_cosine_glove",
+      "qgram2", "jwink", "rat_set", "common_ratio", "qgram", "lcsub", "leven_norm", "strike_match", "common_ratio2"
+    };
+
     HashSet<String> topFeats = new HashSet<>();
     Collections.addAll(topFeats, bestFeatures);
+    Collections.addAll(topFeats,bestFeatures2);
+    System.out.println();
     topFeats.add("DUMMY_COMPUTE_FC_W");
     topFeats.add("DUMMY_COMPUTE_EM_W");
     topFeats.add("DUMMY_COMPUTE_FC_F");
     topFeats.add("DUMMY_COMPUTE_EM_F");
-    topFeats.add("wes_hamming");
-    topFeats.add("wes_euclidean");
-    topFeats.add("wes_minkowski");
-    topFeats.add("wess_hamming");
-    topFeats.add("wess_euclidean");
-    topFeats.add("wess_minkowski");
-    topFeats.add("wes_hamming2");
-    topFeats.add("wes_euclidean2");
-    topFeats.add("wes_minkowski2");
-    topFeats.add("wess_hamming2");
-    topFeats.add("wess_euclidean2");
-    topFeats.add("wess_minkowski2");
-    topFeats.add("wes1_skew");
-    topFeats.add("wes2_skew");
-    topFeats.add("wess1_skew");
-    topFeats.add("wess2_skew");
-    topFeats.add("wes1_kurt");
-    topFeats.add("wes2_kurt");
-    topFeats.add("wess1_kurt");
-    topFeats.add("wess2_kurt");
-    topFeats.add("wes1_skew2");
-    topFeats.add("wes2_skew2");
-    topFeats.add("wess1_skew2");
-    topFeats.add("wess2_skew2");
-    topFeats.add("wes1_kurt2");
-    topFeats.add("wes2_kurt2");
-    topFeats.add("wess1_kurt2");
-    topFeats.add("wess2_kurt2");
-
-    topFeats.add("wes1_sum_glove");
-    topFeats.add("wes2_sum_glove");
-    topFeats.add("abs_wes_sum_glove");
-    topFeats.add("wess1_sum_glove");
-    topFeats.add("wess2_sum_glove");
-    topFeats.add("abs_wess_sum_glove");
-    topFeats.add("wes_cosine_glove");
-    topFeats.add("wes_hamming_glove");
-    topFeats.add("wes_euclidean_glove");
-    topFeats.add("wes_minkowski_glove");
-    topFeats.add("wes1_skew_glove");
-    topFeats.add("wes2_skew_glove");
-    topFeats.add("wess1_skew_glove");
-    topFeats.add("wess2_skew_glove");
-    topFeats.add("wes1_kurt_glove");
-    topFeats.add("wes2_kurt_glove");
-    topFeats.add("wess1_kurt_glove");
-    topFeats.add("wess2_kurt_glove");
-    topFeats.add("wess_cosine_glove");
-    topFeats.add("wess_hamming_glove");
-    topFeats.add("wess_euclidean_glove");
-    topFeats.add("wess_minkowski_glove");
-    topFeats.add("emd_glove");
-    topFeats.add("canberra_glove");
-    topFeats.add("wmd_glove");
-
-    topFeats.add("wes1_sum_glove2");
-    topFeats.add("wes2_sum_glove2");
-    topFeats.add("abs_wes_sum_glove2");
-    topFeats.add("wess1_sum_glove2");
-    topFeats.add("wess2_sum_glove2");
-    topFeats.add("abs_wess_sum_glove2");
-    topFeats.add("wes_cosine_glove2");
-    topFeats.add("wes_hamming_glove2");
-    topFeats.add("wes_euclidean_glove2");
-    topFeats.add("wes_minkowski_glove2");
-    topFeats.add("wes1_skew_glove2");
-    topFeats.add("wes2_skew_glove2");
-    topFeats.add("wess1_skew_glove2");
-    topFeats.add("wess2_skew_glove2");
-    topFeats.add("wes1_kurt_glove2");
-    topFeats.add("wes2_kurt_glove2");
-    topFeats.add("wess1_kurt_glove2");
-    topFeats.add("wess2_kurt_glove2");
-    topFeats.add("wess_cosine_glove2");
-    topFeats.add("wess_hamming_glove2");
-    topFeats.add("wess_euclidean_glove2");
-    topFeats.add("wess_minkowski_glove2");
-    topFeats.add("emd_glove2");
-    topFeats.add("canberra_glove2");
-    topFeats.add("wmd_glove2");
+//    topFeats.add("wes_hamming");
+//    topFeats.add("wes_euclidean");
+//    topFeats.add("wes_minkowski");
+//    topFeats.add("wess_hamming");
+//    topFeats.add("wess_euclidean");
+//    topFeats.add("wess_minkowski");
+//    topFeats.add("wes_hamming2");
+//    topFeats.add("wes_euclidean2");
+//    topFeats.add("wes_minkowski2");
+//    topFeats.add("wess_hamming2");
+//    topFeats.add("wess_euclidean2");
+//    topFeats.add("wess_minkowski2");
+//    topFeats.add("wes1_skew");
+//    topFeats.add("wes2_skew");
+//    topFeats.add("wess1_skew");
+//    topFeats.add("wess2_skew");
+//    topFeats.add("wes1_kurt");
+//    topFeats.add("wes2_kurt");
+//    topFeats.add("wess1_kurt");
+//    topFeats.add("wess2_kurt");
+//    topFeats.add("wes1_skew2");
+//    topFeats.add("wes2_skew2");
+//    topFeats.add("wess1_skew2");
+//    topFeats.add("wess2_skew2");
+//    topFeats.add("wes1_kurt2");
+//    topFeats.add("wes2_kurt2");
+//    topFeats.add("wess1_kurt2");
+//    topFeats.add("wess2_kurt2");
+//
+//    topFeats.add("wes1_sum_glove");
+//    topFeats.add("wes2_sum_glove");
+//    topFeats.add("abs_wes_sum_glove");
+//    topFeats.add("wess1_sum_glove");
+//    topFeats.add("wess2_sum_glove");
+//    topFeats.add("abs_wess_sum_glove");
+//    topFeats.add("wes_cosine_glove");
+//    topFeats.add("wes_hamming_glove");
+//    topFeats.add("wes_euclidean_glove");
+//    topFeats.add("wes_minkowski_glove");
+//    topFeats.add("wes1_skew_glove");
+//    topFeats.add("wes2_skew_glove");
+//    topFeats.add("wess1_skew_glove");
+//    topFeats.add("wess2_skew_glove");
+//    topFeats.add("wes1_kurt_glove");
+//    topFeats.add("wes2_kurt_glove");
+//    topFeats.add("wess1_kurt_glove");
+//    topFeats.add("wess2_kurt_glove");
+//    topFeats.add("wess_cosine_glove");
+//    topFeats.add("wess_hamming_glove");
+//    topFeats.add("wess_euclidean_glove");
+//    topFeats.add("wess_minkowski_glove");
+//    topFeats.add("emd_glove");
+//    topFeats.add("canberra_glove");
+//    topFeats.add("wmd_glove");
+//
+//    topFeats.add("wes1_sum_glove2");
+//    topFeats.add("wes2_sum_glove2");
+//    topFeats.add("abs_wes_sum_glove2");
+//    topFeats.add("wess1_sum_glove2");
+//    topFeats.add("wess2_sum_glove2");
+//    topFeats.add("abs_wess_sum_glove2");
+//    topFeats.add("wes_cosine_glove2");
+//    topFeats.add("wes_hamming_glove2");
+//    topFeats.add("wes_euclidean_glove2");
+//    topFeats.add("wes_minkowski_glove2");
+//    topFeats.add("wes1_skew_glove2");
+//    topFeats.add("wes2_skew_glove2");
+//    topFeats.add("wess1_skew_glove2");
+//    topFeats.add("wess2_skew_glove2");
+//    topFeats.add("wes1_kurt_glove2");
+//    topFeats.add("wes2_kurt_glove2");
+//    topFeats.add("wess1_kurt_glove2");
+//    topFeats.add("wess2_kurt_glove2");
+//    topFeats.add("wess_cosine_glove2");
+//    topFeats.add("wess_hamming_glove2");
+//    topFeats.add("wess_euclidean_glove2");
+//    topFeats.add("wess_minkowski_glove2");
+//    topFeats.add("emd_glove2");
+//    topFeats.add("canberra_glove2");
+//    topFeats.add("wmd_glove2");
 
     ArrayList<Feature> feats = new ArrayList<>(Arrays.asList(
       // "normal" features
