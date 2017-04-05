@@ -28,10 +28,11 @@ public class WordEmbeddings extends Iced {
     BufferedString bs= _map.get(s);
     if( bs==null )
       return;
-    int i=bs.getOffset();
+    int off=bs.getOffset();
     byte[] buf = bs.getBuffer();
     int idx=0;
-    for(;i<4*300;i+=4)
+    int i=off;
+    for(;i<off+4*300;i+=4)
       res[idx++]=(double)readInt(i,buf)/1e6;
   }
 
