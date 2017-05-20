@@ -2,23 +2,25 @@ package quora;
 
 
 import DiffLib.Levenshtein;
+import embeddings.WordEmbeddings;
 import water.H2O;
 import water.H2OApp;
 import water.Job;
 import water.Key;
 import water.fvec.Frame;
 import water.fvec.Vec;
+import water.util.Log;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 
+import static embeddings.WordEmbeddings.EMBEDDINGS.GLOVE;
+import static embeddings.WordEmbeddings.EMBEDDINGS.GOOGL;
 import static quora.PreprocessorTask.Feature;
 import static quora.Utils.StrikeAMatch.compareStrings;
 import static quora.Utils.*;
-import static quora.WordEmbeddings.WORD_EM.GLOVE;
-import static quora.WordEmbeddings.WORD_EM.GOOGL;
 import static water.KaggleUtils.importParseFrame;
 import static water.util.MathUtils.sum;
 
@@ -26,7 +28,7 @@ import static water.util.MathUtils.sum;
 public class FeatureCompute {
 
   public static void main(String[] args) {
-    WordEmbeddings.WORD_EM tapEnumToLoad = WordEmbeddings.WORD_EM.GLOVE; // read the word embeddings in clinit on each node in cluster
+    WordEmbeddings.EMBEDDINGS tapEnumToLoad = GLOVE; // read the word embeddings in clinit on each node in cluster
     // boot up h2o for preprocessing
     H2OApp.main(args);
     int id=18;
@@ -37,6 +39,7 @@ public class FeatureCompute {
   }
 
   static void runTrain(int id, boolean sample) {
+    Log.info("Building the training data features");
     String outpath= "./data/train_feats"+id+".csv";
     String path = sample?"./data/train_sample.csv":"./data/train_clean.csv";
     String name = "train";
@@ -56,6 +59,7 @@ public class FeatureCompute {
   }
 
   static void runTest(int id,boolean sample) {
+    Log.info("Building the testing data features");
     String outpath= "./data/test_feats"+id+".csv";
     String path = sample?"./data/test_sample.csv":"./data/test_clean.csv";
     String name = "test";

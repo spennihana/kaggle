@@ -5,7 +5,7 @@ import Html exposing (..)
 import Html.Attributes exposing (class, style, href, id)
 import Html.Events exposing (onClick, onWithOptions)
 import Window
-import Utils exposing (clickOptionsTT)
+import Utils exposing (clickOptionsTT, doTask)
 import Schemas.Decoders exposing (emptySchema, decodeSchema, GetQuestionSchema)
 import Schemas.Requests exposing (doGET)
 
@@ -16,14 +16,15 @@ main : Program Config Model Msg
 main = Html.programWithFlags { init = init, view = view, update = update, subscriptions = subscriptions }
 
 type alias Model =
-  { sheight: Int,  -- screen height
+  { sheight: Int,   -- screen height
     swidth: Int,    -- screen width
     baseurl: String,
     question1: String,
     question2: String,
     label: Int,
     userLabel:Int,
-    rowId: Int
+    rowId: Int,
+    predLabel:Int
   }
 
 type Msg
@@ -40,8 +41,8 @@ init : Config -> (Model, Cmd Msg)
 init cfg =
   let baseurl="http://"++cfg.ip++":"++cfg.p++"/3/" in
   {sheight= -1, swidth= -1, baseurl=baseurl,
-   question1="", question2="", label= -1, userLabel= -1, rowId= -1
-  } ! [Utils.winsize WinSize, getQ baseurl]
+   question1="", question2="", label= -1, userLabel= -1, rowId= -1, predLabel= -1
+  } ! [Utils.winsize WinSize, scroll baseurl]
 
 subscriptions : Model -> Sub Msg
 subscriptions model = Sub.batch [Window.resizes WinSize]
@@ -53,12 +54,15 @@ update msg model =
     NoOp -> model ! []
     Prev -> model ! [prevQ model.baseurl model.rowId]
     Next -> model ! [nextQ model.baseurl]
-    Hot  -> model ! [set model.baseurl model.label]
-    Not  -> model ! [set model.baseurl (1-model.label)]
+    Hot  -> model ! [set model.baseurl model.label model.rowId, doTask Next]
+    Not  -> model ! [set model.baseurl (1-model.label) model.rowId, doTask Next]
     Save -> model ! [save model.baseurl]
     UpdateModel gmsg ->
-      let (g, cmd, outmsg) = Schemas.Requests.update gmsg in
-      {model| question1=g.question1, question2=g.question2, label=g.label, userLabel=g.user_label, rowId=g.row_id} ! []
+      let
+        (g, cmd, outmsg) = Schemas.Requests.update gmsg
+
+      in
+      {model| question1=g.question1, question2=g.question2, label=g.label, userLabel=g.user_label, rowId=g.row_id, predLabel=g.pred_label} ! []
 
 view : Model -> Html Msg
 view model = div[]
@@ -66,6 +70,7 @@ view model = div[]
                  div[][text <| "Question 2: " ++ (model.question2)],
                  div[][text <| "Label: "      ++ (toString model.label)],
                  div[][text <| "User label: " ++ (toString model.userLabel)],
+                 div[][text <| "Pred label: " ++ (toString model.predLabel)],
                  div[style[("display", "inline-block")]][
                    div[style[("float", "left")],onClick Prev][prev "fa fa-caret-left" "prev"],
                    div[style[("padding-left", "20px"), ("float", "right")],onClick Next][btn "fa fa-caret-right" "next"]
@@ -97,6 +102,8 @@ btn2 caret txt color =
 horizontalDivider attrs = div[style(attrs),class "divider"][]
 
 -- HTTP api
+scroll: String -> Cmd Msg
+scroll baseurl = get (baseurl ++ "Scroll")
 
 prevQ: String -> Int-> Cmd Msg
 prevQ baseurl row_id = get (baseurl ++ "Next?row_id="++ (toString (max (row_id-1) 0)))
@@ -107,8 +114,8 @@ getQ baseurl = get (baseurl ++ "Get")
 nextQ: String -> Cmd Msg
 nextQ baseurl =  get (baseurl ++ "Next?row_id=-1")
 
-set: String -> Int -> Cmd Msg
-set baseurl label = get (baseurl ++ "Set?user_label=" ++ (toString label))
+set: String -> Int -> Int -> Cmd Msg
+set baseurl label row_id = get (baseurl ++ "Set?user_label=" ++ (toString label) ++ "&row_id="++(toString row_id))
 
 save: String -> Cmd Msg
 save baseurl = get (baseurl ++ "Save")

@@ -5,11 +5,9 @@ import hex.Model;
 import hex.ScoreKeeper;
 import hex.tree.gbm.GBM;
 import hex.tree.gbm.GBMModel;
-import water.AutoBuffer;
-import water.H2O;
-import water.H2OApp;
-import water.Job;
+import water.*;
 import water.fvec.Frame;
+import water.fvec.Vec;
 
 import java.io.*;
 
@@ -21,7 +19,10 @@ public class Modeling {
   public static void main(String[] args) {
     H2OApp.main(args);
 
-    Frame training = importParseFrame("./data/train_feats17.csv", "training_features");
+    Frame training = importParseFrame("./data/train_feats3.csv", "training_features");
+    Vec is_dup= training.vec("is_duplicate").toCategoricalVec();
+    training.replace(training.find("is_duplicate"), is_dup).remove();
+    DKV.put(training);
     GBMModel.GBMParameters parms = new GBMModel.GBMParameters();
 
     int subnum;
@@ -52,7 +53,7 @@ public class Modeling {
 //    test._key = Key.make("test_frame");
 //    DKV.put(test);
 
-    parms._ntrees = 500;
+    parms._ntrees = 5;
     parms._learn_rate = 0.02;
     parms._max_depth = 4;
     parms._stopping_metric = ScoreKeeper.StoppingMetric.logloss;
@@ -73,7 +74,7 @@ public class Modeling {
     }
 
     // predict and save predictions
-    predict(model,"./data/test_feats17.csv",subnum);
+    predict(model,"./data/test_feats3.csv",subnum);
 
     H2O.shutdown(0);
     System.exit(0);

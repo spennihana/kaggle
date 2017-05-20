@@ -19,7 +19,15 @@ public class Quora {
     byte[] types= new byte[]{Vec.T_NUM,Vec.T_NUM,Vec.T_NUM, Vec.T_STR, Vec.T_STR, Vec.T_NUM};
     Frame fr = importParseFrame(path,name, types);
 
-    File f= new File("./data/user_labels.csv");
+    String predPath = "./submissions/train_preds23.csv";
+    String predName = "preds";
+    byte[] predType = new byte[]{Vec.T_NUM};
+    Frame preds = importParseFrame(predPath,predName,predType);
+
+    fr.add(preds);
+    DKV.put(fr);
+
+    File f= new File("./data/user_labels2.csv");
     Frame userLabels;
     if( f.exists() )
       importParseFrame(f.getPath(),"user_labels",new byte[]{Vec.T_NUM});

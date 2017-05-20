@@ -9,8 +9,8 @@ import String
 (:=): String -> Decoder a -> Decoder a
 (:=) = field
 
-type alias GetQuestionSchema = { row_id: Int, question1: String, question2: String, label: Int, user_label: Int }
-emptySchema = { row_id= -1, question1="", question2="", label= -1, user_label= -1 }
+type alias GetQuestionSchema = { row_id: Int, question1: String, question2: String, label: Int, user_label: Int, pred_label: Int }
+emptySchema = { row_id= -1, question1="", question2="", label= -1, user_label= -1, pred_label= -1 }
 decodeSchema : Decode.Decoder GetQuestionSchema
 decodeSchema =
     Decode.succeed GetQuestionSchema
@@ -19,6 +19,7 @@ decodeSchema =
         |: ("question2" := Decode.string)
         |: ("label" := Decode.int)
         |: ("user_label" := Decode.int)
+        |: ("pred_label" := Decode.int)
 
 -- errors
 type alias H2OErr =

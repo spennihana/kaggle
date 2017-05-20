@@ -1,5 +1,6 @@
 package quora;
 
+import embeddings.WordEmbeddings;
 import info.debatty.java.stringsimilarity.*;
 import org.apache.commons.math3.stat.descriptive.moment.Kurtosis;
 import org.apache.commons.math3.stat.descriptive.moment.Skewness;
@@ -9,12 +10,12 @@ import water.fvec.Chunk;
 import water.util.ArrayUtils;
 import water.util.IcedInt;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.*;
 
 public class Utils {
+
+  public static final transient HashMap<String,String[]> ACRONYMS = new HashMap<>();
+  public static final transient HashMap<String,String[]> CONTRACTIONS = new HashMap<>();
 
   public static final transient HashSet<String> STOP_WORDS = new HashSet<>();
   public static final String[] STOP_WORDS_LIST = new String[]{
@@ -64,59 +65,26 @@ public class Utils {
     @Override public void reduce(Sum t) { _sum0 += t._sum0; _sum1 += t._sum1; }
   }
 
-  public static String contractionMap(String s) {
-    if( s.equals("aren't") ) return "are not";
-    if( s.equals("can't") ) return "cannot";
-    if( s.equals("couldn't") ) return "could not";
-    if( s.equals("didn't") ) return "did not";
-    if( s.equals("doesn't") ) return "does not";
-    if( s.equals("don't") ) return "do not";
-    if( s.equals("hadn't") ) return "had not";
-    if( s.equals("hasn't") ) return "has not";
-    if( s.equals("haven't") ) return "have not";
-    if( s.equals("he'd") ) return "he had";
-    if( s.equals("he'll") ) return "he will";
-    if( s.equals("he's") ) return "he is";
-    if( s.equals("I'd") ) return "I had";
-    if( s.equals("I'll") ) return "I will";
-    if( s.equals("I'm") ) return "I am";
-    if( s.equals("I've") ) return "I have";
-    if( s.equals("isn't") ) return "is not";
-    if( s.equals("let's") ) return "let us";
-    if( s.equals("mightn't") ) return "might not";
-    if( s.equals("mustn't") ) return "must not";
-    if( s.equals("shan't") ) return "shall not";
-    if( s.equals("she'd") ) return "she had";
-    if( s.equals("she'll") ) return "she will";
-    if( s.equals("she's") ) return "she is";
-    if( s.equals("shouldn't") ) return "should not";
-    if( s.equals("that's") ) return "that is";
-    if( s.equals("there's") ) return "there is";
-    if( s.equals("they'd") ) return "they had";
-    if( s.equals("they'll") ) return "they will";
-    if( s.equals("they're") ) return "they are";
-    if( s.equals("they've") ) return "they have";
-    if( s.equals("we'd") ) return "we had";
-    if( s.equals("we're") ) return "we are";
-    if( s.equals("we've") ) return "we have";
-    if( s.equals("weren't") ) return "were not";
-    if( s.equals("what'll") ) return "what will";
-    if( s.equals("what're") ) return "what are";
-    if( s.equals("what's") ) return "what is";
-    if( s.equals("what've") ) return "what have";
-    if( s.equals("where's") ) return "where is";
-    if( s.equals("who's") ) return "who had; who would";
-    if( s.equals("who'll") ) return "who will";
-    if( s.equals("who're") ) return "who are";
-    if( s.equals("who's") ) return "who is";
-    if( s.equals("who've") ) return "who have";
-    if( s.equals("won't") ) return "will not";
-    if( s.equals("wouldn't") ) return "would not";
-    if( s.equals("you'd") ) return "you had";
-    if( s.equals("you'll") ) return "you will";
-    if( s.equals("you're") ) return "you are";
-    if( s.equals("you've") ) return "you have";
-    return s;
+  public static String[] splitSmart(String s) {
+    ArrayList<String> strs = new ArrayList<>();
+    int x=0;
+    int i=0;
+    for(;i<s.length();++i) {
+      if( s.charAt(i)==' ' && x<i) {
+        String sub = s.substring(x,i);
+        String[] ac, contraction;
+        if( (ac=ACRONYMS.get(sub))!=null )
+          Collections.addAll(strs,ac);
+        else if( (contraction=CONTRACTIONS.get(sub))!=null )
+          Collections.addAll(strs, contraction);
+        else
+          strs.add(sub);
+        x=i+1;
+      }
+    }
+    if( x<i )
+      strs.add(s.substring(x,i));
+    return strs.toArray(new String[strs.size()]);
   }
 
   public static String join(String[] words) {
@@ -242,14 +210,14 @@ public class Utils {
     return totalDistance;
   }
 
-  static boolean allzero(double[] d) {
+  static boolean allzero(float[] d) {
     for(double dd: d) if(dd!=0) return false;
     return true;
   }
 
-  public static double wmd(String[] w1, String[] w2, double[] d, WordEmbeddings.WORD_EM em) {
+  public static double wmd(String[] w1, String[] w2, float[] d, WordEmbeddings.EMBEDDINGS em) {
     Arrays.fill(d,0);
-    HashMap<String, double[]> embeddings = new HashMap<>();
+    HashMap<String, float[]> embeddings = new HashMap<>();
     int len_t1=0, len_t2=0;
     for(String w: w1) {
       em.get(w,d);
@@ -305,7 +273,7 @@ public class Utils {
       for(String t2: dict.keySet()) {
         j++;
         if( !docset1.contains(t1) || !docset2.contains(t2) ) continue;
-        distMat[i][j] = ArrayUtils.l2norm2(embeddings.get(t1),embeddings.get(t2));
+        distMat[i][j] = l2norm2(embeddings.get(t1),embeddings.get(t2));
         sum += distMat[i][j];
       }
     }
@@ -314,6 +282,15 @@ public class Utils {
     return JEMD.emdHat(doc2bow(doc1,dict), doc2bow(doc2,dict),distMat,-1);
   }
 
+  public static double l2norm2(float[] x, float[] y) {  // Computes \sum_{i=1}^n (x_i - y_i)^2
+    assert x.length == y.length;
+    double sse = 0;
+    for(int i = 0; i < x.length; i++) {
+      double diff = x[i] - y[i];
+      sse += diff * diff;
+    }
+    return sse;
+  }
 
   public static double[] doc2bow(String[] w, HashMap<String,IcedInt> dict) {
     HashMap<String,IcedInt> counter = new HashMap<>();
@@ -449,7 +426,7 @@ public class Utils {
     return c;
   }
 
-  public static void fillEmVecs(String[] words, WordEmbeddings.WORD_EM em, double[] f, double[] ws, double[] wss) {
+  public static void fillEmVecs(String[] words, WordEmbeddings.EMBEDDINGS em, float[] f, double[] ws, double[] wss) {
     for(int i=0;i<ws.length;++i) ws[i]=wss[i]=0;
     for(String s: words ) {
       em.get(s,f);
@@ -476,7 +453,7 @@ public class Utils {
     return a;
   }
 
-  static void add(double[] a, double[] f) {
+  static void add(double[] a, float[] f) {
     if( f==null ) return;
     for(int i=0;i<f.length;++i) {
       double aa = Double.isNaN(a[i])?0:a[i];
@@ -485,7 +462,7 @@ public class Utils {
     }
   }
 
-  static void addSq(double[] a, double[] f) {
+  static void addSq(double[] a, float[] f) {
     if( f==null ) return;
     for(int i=0;i<f.length;++i) {
       double aa = Double.isNaN(a[i])?0:a[i];
@@ -558,8 +535,66 @@ public class Utils {
     _optimStringAlign = new OptimalStringAlignment();
     _qgram = new QGram();
     _sdice = new SorensenDice();
-  }
 
+    ACRONYMS.put("UPSC",new String[]{"Union","Public","Service","Commission"});
+    ACRONYMS.put("AOA", new String[]{"Angle","of","Attack"});
+    ACRONYMS.put("CBSE",new String[]{"Central","Board","of","Secondary","Education"});
+    ACRONYMS.put("OITNB", new String[]{"Orange","is","the","New","Black"});
+    ACRONYMS.put("CTC", new String[]{"Cost","to","Company"});
+    ACRONYMS.put("dms", new String[]{"private","messages"});
+
+    CONTRACTIONS.put("aren't", new String[]{"are", "not"});
+    CONTRACTIONS.put("can't", new String[]{"cannot"});
+    CONTRACTIONS.put("couldn't", new String[]{"could", "not"});
+    CONTRACTIONS.put("didn't", new String[]{"did", "not"});
+    CONTRACTIONS.put("doesn't", new String[]{"does", "not"});
+    CONTRACTIONS.put("don't", new String[]{"do", "not"});
+    CONTRACTIONS.put("hadn't", new String[]{"had", "not"});
+    CONTRACTIONS.put("hasn't", new String[]{"has", "not"});
+    CONTRACTIONS.put("haven't", new String[]{"have", "not"});
+    CONTRACTIONS.put("he'd", new String[]{"he", "had"});
+    CONTRACTIONS.put("he'll", new String[]{"he", "will"});
+    CONTRACTIONS.put("he's", new String[]{"he", "is"});
+    CONTRACTIONS.put("I'd", new String[]{"I", "had"});
+    CONTRACTIONS.put("I'll", new String[]{"I", "will"});
+    CONTRACTIONS.put("I'm", new String[]{"I", "am"});
+    CONTRACTIONS.put("I've", new String[]{"I", "have"});
+    CONTRACTIONS.put("isn't", new String[]{"is", "not"});
+    CONTRACTIONS.put("let's", new String[]{"let", "us"});
+    CONTRACTIONS.put("mightn't", new String[]{"might", "not"});
+    CONTRACTIONS.put("mustn't", new String[]{"must", "not"});
+    CONTRACTIONS.put("shan't", new String[]{"shall", "not"});
+    CONTRACTIONS.put("she'd", new String[]{"she", "had"});
+    CONTRACTIONS.put("she'll", new String[]{"she", "will"});
+    CONTRACTIONS.put("she's", new String[]{"she", "is"});
+    CONTRACTIONS.put("shouldn't", new String[]{"should", "not"});
+    CONTRACTIONS.put("that's", new String[]{"that", "is"});
+    CONTRACTIONS.put("there's", new String[]{"there", "is"});
+    CONTRACTIONS.put("they'd", new String[]{"they", "had"});
+    CONTRACTIONS.put("they'll", new String[]{"they", "will"});
+    CONTRACTIONS.put("they're", new String[]{"they", "are"});
+    CONTRACTIONS.put("they've", new String[]{"they", "have"});
+    CONTRACTIONS.put("we'd", new String[]{"we", "had"});
+    CONTRACTIONS.put("we're", new String[]{"we", "are"});
+    CONTRACTIONS.put("we've", new String[]{"we", "have"});
+    CONTRACTIONS.put("weren't", new String[]{"were", "not"});
+    CONTRACTIONS.put("what'll", new String[]{"what", "will"});
+    CONTRACTIONS.put("what're", new String[]{"what", "are"});
+    CONTRACTIONS.put("what's", new String[]{"what", "is"});
+    CONTRACTIONS.put("what've", new String[]{"what", "have"});
+    CONTRACTIONS.put("where's", new String[]{"where", "is"});
+    CONTRACTIONS.put("who's", new String[]{"who", "would"});
+    CONTRACTIONS.put("who'll", new String[]{"who", "will"});
+    CONTRACTIONS.put("who're", new String[]{"who", "are"});
+    CONTRACTIONS.put("who's", new String[]{"who", "is"});
+    CONTRACTIONS.put("who've", new String[]{"who", "have"});
+    CONTRACTIONS.put("won't", new String[]{"will", "not"});
+    CONTRACTIONS.put("wouldn't", new String[]{"would", "not"});
+    CONTRACTIONS.put("you'd", new String[]{"you", "had"});
+    CONTRACTIONS.put("you'll", new String[]{"you", "will"});
+    CONTRACTIONS.put("you're", new String[]{"you", "are"});
+    CONTRACTIONS.put("you've", new String[]{"you", "have"});
+  }
 
   public static void main(String[] args) {
     String s1 = "air force 20 2017 aboard jan obamas plan sworn trump will";

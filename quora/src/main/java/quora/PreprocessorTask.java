@@ -2,6 +2,7 @@ package quora;
 
 
 import DiffLib.FuzzyCmp;
+import embeddings.WordEmbeddings;
 import water.Iced;
 import water.MRTask;
 import water.fvec.Chunk;
@@ -49,7 +50,7 @@ public class PreprocessorTask extends MRTask<PreprocessorTask> {
     // some re-usables
     BufferedString bstr = new BufferedString();
     FuzzyCmp fc = new FuzzyCmp();
-    double[] raw = new double[300];
+    float[] raw = new float[300];
     double[] we_s1 = new double[300]; // word embeddings vector
     double[] we_ss1= new double[300]; // sum squared of word embeddings
 
@@ -67,10 +68,10 @@ public class PreprocessorTask extends MRTask<PreprocessorTask> {
         s2 = cs[Q2].isNA(r)?"":cs[Q2].atStr(bstr, r).toString();
 
         // drop question marks
-        s1 = s1.replaceAll("(?!')\\p{P}", ""); // remove punc except single apostrophe
-        s2 = s2.replaceAll("(?!')\\p{P}", "");
-        w1 = s1.split(" ");
-        w2 = s2.split(" ");
+        s1 = s1.replaceAll("(?!')\\p{P}", " "); // remove punc except single apostrophe
+        s2 = s2.replaceAll("(?!')\\p{P}", " ");
+        w1 = Utils.splitSmart(s1);
+        w2 = Utils.splitSmart(s2);
 
 
         // now remove stop words and tolower
@@ -135,9 +136,9 @@ public class PreprocessorTask extends MRTask<PreprocessorTask> {
     public String _name;
     public feature_op _op;
     public we_op _weop;
-    WordEmbeddings.WORD_EM _em;
+    WordEmbeddings.EMBEDDINGS _em;
     public Feature(String name, feature_op op) { _name=name; _op=op; _weop=null; }
-    public Feature(String name, WordEmbeddings.WORD_EM em, we_op weop) { _name=name; _op=null; _weop=weop; _em=em; }
+    public Feature(String name, WordEmbeddings.EMBEDDINGS em, we_op weop) { _name=name; _op=null; _weop=weop; _em=em; }
     /**
      * lambda for computing different features
      */
@@ -147,7 +148,7 @@ public class PreprocessorTask extends MRTask<PreprocessorTask> {
 
     interface we_op {
       double weop(String[] w1, String[] w2, String[] fw1, String[] fw2, double[] ws1, double[] wss1,
-                  double[] ws2, double[] wss2, double[] rawEm, WordEmbeddings.WORD_EM em);
+                  double[] ws2, double[] wss2, float[] rawEm, WordEmbeddings.EMBEDDINGS em);
     }
   }
 }

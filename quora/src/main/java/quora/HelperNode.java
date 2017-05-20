@@ -1,10 +1,11 @@
 package quora;
 
+import embeddings.WordEmbeddings;
 import water.H2O;
 
 public class HelperNode {
   public static void main(String[] args) {
-    WordEmbeddings.WORD_EM tapEnumToLoad = WordEmbeddings.WORD_EM.GLOVE;
+    WordEmbeddings.EMBEDDINGS tapEnumToLoad = WordEmbeddings.EMBEDDINGS.GLOVE;
     H2O.main(args);
   }
 }
