@@ -6,7 +6,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import StratifiedShuffleSplit
 
-training = pd.read_csv("../data/train_feats18.csv")
+training = pd.read_csv("../data/train_feats19.csv")
 print "loaded training frame"
 
 pos_train = training[training['is_duplicate']==1]

@@ -2,13 +2,11 @@ package quora;
 
 
 import DiffLib.Levenshtein;
-import embeddings.WordEmbeddings;
-import water.H2O;
-import water.H2OApp;
-import water.Job;
-import water.Key;
+import water.*;
 import water.fvec.Frame;
 import water.fvec.Vec;
+import water.util.IcedHashMap;
+import water.util.IcedInt;
 import water.util.Log;
 
 import java.util.ArrayList;
@@ -27,29 +25,47 @@ import static water.util.MathUtils.sum;
 
 public class FeatureCompute {
 
+  static IcedHashMap<String, IcedInt> _qfreqs;
+
   public static void main(String[] args) {
-    WordEmbeddings.EMBEDDINGS tapEnumToLoad = GLOVE; // read the word embeddings in clinit on each node in cluster
+//    WordEmbeddings.EMBEDDINGS tapEnumToLoad = GLOVE; // read the word embeddings in clinit on each node in cluster
     // boot up h2o for preprocessing
     H2OApp.main(args);
-    int id=18;
+    int id=20;
     boolean sample=false;
-    runTrain(id,sample);
-    runTest (id,sample);
+    Frame train = parseTrain(sample);
+    Frame test  = parseTest(sample);
+    MagicFeatures.magicFeatures(train,test);
+    runTrain(id,train);
+    runTest (id,test);
     H2O.shutdown(0);
   }
 
-  static void runTrain(int id, boolean sample) {
-    Log.info("Building the training data features");
-    String outpath= "./data/train_feats"+id+".csv";
+  static Frame parseTrain(boolean sample) {
     String path = sample?"./data/train_sample.csv":"./data/train_clean.csv";
     String name = "train";
-    String key= "train_feats";
     byte[] types= new byte[]{Vec.T_NUM,Vec.T_NUM,Vec.T_NUM, Vec.T_STR, Vec.T_STR, Vec.T_NUM};
-    Frame fr = importParseFrame(path,name, types);
+    return importParseFrame(path,name, types);
+  }
+
+  static Frame parseTest(boolean sample) {
+    String path = sample?"./data/test_sample.csv":"./data/test_clean.csv";
+    String name = "test";
+    byte[] types= new byte[]{Vec.T_NUM,Vec.T_STR,Vec.T_STR};
+    return importParseFrame(path,name, types);
+  }
+
+  static void runTrain(int id, Frame fr) {
+    Log.info("Building the training data features");
+    String outpath= "./data/train_feats"+id+".csv";
+    String key= "train_feats";
     long s = System.currentTimeMillis();
     PreprocessorTask pt = new PreprocessorTask(computeFeatures(),true);
     String[] outnames = pt.getNames();
     Frame out = pt.doAll(outnames.length, Vec.T_NUM,fr).outputFrame(Key.make(key),outnames,null);
+    out.prepend( "q1_freq", fr.vec("q1_freq"));
+    out.prepend( "q2_freq", fr.vec("q2_freq"));
+    DKV.put(out);
     System.out.println("all done: " + (System.currentTimeMillis()-s)/1000. + " seconds");
     System.out.println("Writing frame ");
     Job job = Frame.export(out, outpath, out._key.toString(), false, 1);
@@ -58,18 +74,17 @@ public class FeatureCompute {
     fr.delete();
   }
 
-  static void runTest(int id,boolean sample) {
+  static void runTest(int id, Frame fr) {
     Log.info("Building the testing data features");
     String outpath= "./data/test_feats"+id+".csv";
-    String path = sample?"./data/test_sample.csv":"./data/test_clean.csv";
-    String name = "test";
     String key= "test_feats";
-    byte[] types= new byte[]{Vec.T_NUM,Vec.T_STR,Vec.T_STR};
-    Frame fr = importParseFrame(path,name, types);
     long s = System.currentTimeMillis();
     PreprocessorTask pt = new PreprocessorTask(computeFeatures(),false);
     String[] outnames = pt.getNames();
     Frame out = pt.doAll(outnames.length, Vec.T_NUM,fr).outputFrame(Key.make(key),outnames,null);
+    out.prepend( "q1_freq", fr.vec("q1_freq"));
+    out.prepend( "q2_freq", fr.vec("q2_freq"));
+    DKV.put(out);
     System.out.println("all done: " + (System.currentTimeMillis()-s)/1000. + " seconds");
     System.out.println("Writing frame ");
     Job job = Frame.export(out, outpath, out._key.toString(), false, 1);
@@ -97,9 +112,14 @@ public class FeatureCompute {
       "qgram2", "jwink", "rat_set", "common_ratio", "qgram", "lcsub", "leven_norm", "strike_match", "common_ratio2"
     };
 
+    String[] newFeatures = new String[] {
+      "common_words_embeddings_glove", "common_words_embeddings_googl"
+    };
+
     HashSet<String> topFeats = new HashSet<>();
     Collections.addAll(topFeats, bestFeatures);
     Collections.addAll(topFeats,bestFeatures2);
+    Collections.addAll(topFeats,newFeatures);
     System.out.println();
     topFeats.add("DUMMY_COMPUTE_FC_W");
     topFeats.add("DUMMY_COMPUTE_EM_W");
@@ -218,6 +238,7 @@ public class FeatureCompute {
       new Feature("q2_chars",     ((s1, s2, w1, w2, f1, f2, fw1, fw2, fc) -> countChars(w2))),
       new Feature("abs_chars",    ((s1, s2, w1, w2, f1, f2, fw1, fw2, fc) -> Math.abs(countChars(w1))-countChars(w2))),
          new Feature("DUMMY_COMPUTE_EM_W", GOOGL, ((s1, s2, w1, w2, f1, f2, fw1, fw2, d, em) -> 0)),
+      new Feature("common_words_embeddings_googl",  GOOGL,  ((w1, w2, fw1, fw2, ws1, wss1, ws2, wss2, d, em) -> countCommonEmbeddings(w1,w2,3,em))),
       new Feature("wes1_sum", GOOGL,  ((w1, w2, fw1, fw2, ws1, wss1, ws2, wss2, d, em) -> sum(ws1))),
       new Feature("wes2_sum", GOOGL, ((w1, w2, fw1, fw2, ws1, wss1, ws2, wss2, d, em) -> sum(ws2))),
       new Feature("abs_wes_sum", GOOGL, ((w1, w2, fw1, fw2, ws1, wss1, ws2, wss2, d, em) -> Math.abs(sum(ws1) - sum(ws2)))),
@@ -245,6 +266,7 @@ public class FeatureCompute {
       new Feature("wmd", GOOGL, ((w1, w2, fw1, fw2, ws1, wss1, ws2, wss2, d, em) -> wmd(w1,w2,d,em))),
 
          new Feature("DUMMY_COMPUTE_EM_W", GLOVE, ((s1, s2, w1, w2, f1, f2, fw1, fw2, d, em) -> 0)),
+      new Feature("common_words_embeddings_glove",  GLOVE,  ((w1, w2, fw1, fw2, ws1, wss1, ws2, wss2, d, em) -> countCommonEmbeddings(w1,w2,3,em))),
       new Feature("wes1_sum_glove", GLOVE,  ((w1, w2, fw1, fw2, ws1, wss1, ws2, wss2, d, em) -> sum(ws1))),
       new Feature("wes2_sum_glove", GLOVE, ((w1, w2, fw1, fw2, ws1, wss1, ws2, wss2, d, em) -> sum(ws2))),
       new Feature("abs_wes_sum_glove", GLOVE, ((w1, w2, fw1, fw2, ws1, wss1, ws2, wss2, d, em) -> Math.abs(sum(ws1) - sum(ws2)))),

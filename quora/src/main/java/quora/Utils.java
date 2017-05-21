@@ -151,6 +151,24 @@ public class Utils {
     return cnt;
   }
 
+  static int countCommonEmbeddings(String[] q1, String[] q2, int n, WordEmbeddings.EMBEDDINGS em) {
+    HashSet<String> s1 = new HashSet<>();
+    Collections.addAll(s1,q1);
+    for(String q: q1) {
+      WordEmbeddings.SimilarWord[] simwords = em.mostSimilar(q,n);
+      for(WordEmbeddings.SimilarWord sw: simwords) s1.add(sw.word());
+    }
+    int cnt=0;
+    for(String s:q2) {
+      if( s1.contains(s) ) cnt++;
+      WordEmbeddings.SimilarWord[] simwords = em.mostSimilar(s,n);
+      for(WordEmbeddings.SimilarWord sw: simwords) {
+        if( s1.contains(sw.word()) ) cnt++;
+      }
+    }
+    return cnt;
+  }
+
 
   static double countCommonRatio(String[] q1, String[] q2) {
     HashSet<String> s1 = new HashSet<>();

@@ -19,7 +19,7 @@ public class Modeling {
   public static void main(String[] args) {
     H2OApp.main(args);
 
-    Frame training = importParseFrame("./data/train_feats3.csv", "training_features");
+    Frame training = importParseFrame("./data/train_feats19.csv", "training_features");
     Vec is_dup= training.vec("is_duplicate").toCategoricalVec();
     training.replace(training.find("is_duplicate"), is_dup).remove();
     DKV.put(training);
@@ -53,7 +53,7 @@ public class Modeling {
 //    test._key = Key.make("test_frame");
 //    DKV.put(test);
 
-    parms._ntrees = 5;
+    parms._ntrees = 500;
     parms._learn_rate = 0.02;
     parms._max_depth = 4;
     parms._stopping_metric = ScoreKeeper.StoppingMetric.logloss;
@@ -74,7 +74,7 @@ public class Modeling {
     }
 
     // predict and save predictions
-    predict(model,"./data/test_feats3.csv",subnum);
+    predict(model,"./data/test_feats19.csv",subnum);
 
     H2O.shutdown(0);
     System.exit(0);
@@ -89,7 +89,7 @@ public class Modeling {
     Frame res = new Frame();
     res.add("test_id", test.vec("id"));
     res.add("is_duplicate", preds.vec(0));
-    Job job = Frame.export(res, "./submissions/"+subnum+".csv", "submission_"+subnum, false, 1);
+    Job job = Frame.export(res, "./submissions/"+subnum+".csv", "submission_h2o_"+subnum, false, 1);
     job.get();
 
     try(BufferedWriter out = new BufferedWriter(new FileWriter(new File("./submissions/next")) )) {
